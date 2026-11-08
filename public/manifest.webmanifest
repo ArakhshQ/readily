@@ -1,0 +1,20 @@
+{
+  "name": "Readily",
+  "short_name": "Readily",
+  "description": "Free file tools that run on your device: images to PDF, merge and split PDFs, compress, resize and convert images.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f8fc",
+  "theme_color": "#2f5bff",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Images to PDF", "url": "/jpg-to-pdf/" },
+    { "name": "Compress image", "url": "/compress-image/" },
+    { "name": "Merge PDF", "url": "/merge-pdf/" }
+  ]
+}
