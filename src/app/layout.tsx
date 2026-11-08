@@ -8,6 +8,8 @@ import "./globals.css";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { RegisterSW } from "@/components/RegisterSW";
+import { AuthProvider } from "@/components/AuthProvider";
+import { SignupNudge } from "@/components/SignupNudge";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -47,9 +49,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <SiteHeader />
-        <main id="main">{children}</main>
-        <SiteFooter />
+        <AuthProvider>
+          <SiteHeader />
+          <main id="main">{children}</main>
+          <SiteFooter />
+          <SignupNudge />
+        </AuthProvider>
         <RegisterSW />
       </body>
     </html>

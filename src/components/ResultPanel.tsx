@@ -2,13 +2,17 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Check, Copy, Download, Refresh } from "./Icons";
+import Link from "next/link";
+import { useAuth } from "./AuthProvider";
+import { Check, Cloud, Copy, Download, Refresh } from "./Icons";
 import { Message } from "./Message";
 import { downloadBlob, zipOutputs, type Output } from "@/lib/files";
 import { blobToFile, setHandoff } from "@/lib/handoff";
 import { TOOL_BY_SLUG, type ToolSlug } from "@/lib/tools";
 
 interface Props {
+  /** The tool that made these results, for history and saved files. */
+  tool: ToolSlug;
   outputs: Output[];
   /** Name for the ZIP when there is more than one file. */
   zipName: string;
@@ -17,7 +21,12 @@ interface Props {
   onRestart: () => void;
 }
 
-export function ResultPanel({ outputs, zipName, next, onRestart }: Props) {
+type SaveState = "idle" | "saving" | "saved" | string;
+
+export function ResultPanel({ tool, outputs, zipName, next, onRestart }: Props) {
+  const { enabled, session } = useAuth();
+  const [saves, setSaves] = useState<Record<number, SaveState>>({});
+  const logged = useRef(false);
   const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
   const [zipping, setZipping] = useState(false);
@@ -26,7 +35,28 @@ export function ResultPanel({ outputs, zipName, next, onRestart }: Props) {
   useEffect(() => {
     ref.current?.focus();
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
+    window.dispatchEvent(new CustomEvent("readily:result", { detail: { tool } }));
+  }, [tool]);
+
+  // Signed-in users get a history entry: names and sizes only, never the files.
+  useEffect(() => {
+    if (!session || logged.current) return;
+    logged.current = true;
+    import("@/lib/account")
+      .then(({ addHistory }) => addHistory(tool, outputs.map((o) => ({ name: o.name, size: o.blob.size }))))
+      .catch(() => {});
+  }, [session, tool, outputs]);
+
+  async function save(i: number) {
+    setSaves((s) => ({ ...s, [i]: "saving" }));
+    try {
+      const { saveFile } = await import("@/lib/account");
+      await saveFile(outputs[i].blob, outputs[i].name, tool);
+      setSaves((s) => ({ ...s, [i]: "saved" }));
+    } catch (e) {
+      setSaves((s) => ({ ...s, [i]: e instanceof Error ? e.message : "Couldn't save this file." }));
+    }
+  }
 
   async function downloadAll() {
     setZipping(true);
@@ -92,10 +122,19 @@ export function ResultPanel({ outputs, zipName, next, onRestart }: Props) {
                 </div>
               )}
             </div>
-            <button type="button" className={`btn ${many ? "btn-secondary" : "btn-primary"}`} onClick={() => downloadBlob(o.blob, o.name)}>
-              <Download size={18} />
-              Download
-            </button>
+            <div className="result-actions">
+              <button type="button" className={`btn ${many ? "btn-secondary" : "btn-primary"}`} onClick={() => downloadBlob(o.blob, o.name)}>
+                <Download size={18} />
+                Download
+              </button>
+              {session && (
+                <button type="button" className="btn btn-secondary" disabled={saves[i] === "saving" || saves[i] === "saved"} onClick={() => save(i)}>
+                  {saves[i] === "saved" ? <Check size={18} strokeWidth={3} /> : <Cloud size={18} />}
+                  {saves[i] === "saving" ? "Saving" : saves[i] === "saved" ? "Saved" : "Save to my files"}
+                </button>
+              )}
+              {saves[i] && !["idle", "saving", "saved"].includes(saves[i]) && <p className="save-error">{saves[i]}</p>}
+            </div>
           </li>
         ))}
       </ul>
@@ -105,6 +144,11 @@ export function ResultPanel({ outputs, zipName, next, onRestart }: Props) {
             <Download size={18} />
             {zipping ? "Preparing ZIP" : "Download all as ZIP"}
           </button>
+        )}
+        {enabled && !session && (
+          <p className="save-hint">
+            <Cloud size={16} /> <Link href="/signup/">Sign up free</Link> to save results and see your history on any device.
+          </p>
         )}
         <button type="button" className="btn btn-secondary" onClick={onRestart}>
           <Refresh size={18} />

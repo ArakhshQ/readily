@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "./Icons";
 import { ToolsMenu } from "./ToolsMenu";
+import { AccountNav } from "./AccountNav";
 
 export function SiteHeader() {
   return (
@@ -20,8 +21,9 @@ export function SiteHeader() {
             <Link href="/image-tools/">Image</Link>
             <Link href="/video-tools/">Video</Link>
             <Link href="/audio-tools/">Audio</Link>
+            <Link href="/pricing/">Pricing</Link>
           </span>
-          {/* Pricing and account links are added in the plans and accounts steps. */}
+          <AccountNav />
         </nav>
       </div>
     </header>

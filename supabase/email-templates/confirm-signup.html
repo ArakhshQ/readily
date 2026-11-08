@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<body style="margin:0;padding:0;background:#f6f8fc;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#0f1b3d;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f8fc;padding:32px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border:1px solid #dce2ee;border-radius:16px;">
+        <tr><td style="padding:28px 32px 0;">
+          <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+            <td style="width:28px;height:28px;background:#2f5bff;border-radius:7px;color:#ffffff;font-weight:800;font-size:16px;text-align:center;line-height:28px;">&#10003;</td>
+            <td style="padding-left:10px;font-size:20px;font-weight:800;letter-spacing:-0.02em;">Readily</td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="padding:24px 32px 8px;">
+          <h1 style="margin:0 0 12px;font-size:24px;line-height:1.2;letter-spacing:-0.02em;">Confirm your email</h1>
+          <p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#33405f;">Thanks for signing up. Confirm your email to open your Readily dashboard, where your history and saved files live.</p>
+          <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#2f5bff;color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;padding:14px 24px;border-radius:10px;">Confirm my email</a>
+          <p style="margin:24px 0 0;font-size:14px;line-height:1.6;color:#5a6684;">If you didn't create a Readily account, you can ignore this email.</p>
+        </td></tr>
+        <tr><td style="padding:16px 32px 28px;">
+          <p style="margin:0;font-size:13px;line-height:1.6;color:#5a6684;">If the button doesn't work, copy this link into your browser:<br><a href="{{ .ConfirmationURL }}" style="color:#2f5bff;word-break:break-all;">{{ .ConfirmationURL }}</a></p>
+        </td></tr>
+      </table>
+      <p style="margin:16px 0 0;font-size:12px;color:#5a6684;">Readily: free file tools that run on your device.</p>
+    </td></tr>
+  </table>
+</body>
+</html>

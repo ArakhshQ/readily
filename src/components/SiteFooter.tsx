@@ -32,6 +32,12 @@ export function SiteFooter() {
             <h3>Readily</h3>
             <ul>
               <li>
+                <Link href="/pricing/">Pricing</Link>
+              </li>
+              <li>
+                <Link href="/dashboard/">Your dashboard</Link>
+              </li>
+              <li>
                 <Link href="/about/">About</Link>
               </li>
               <li>

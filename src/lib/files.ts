@@ -15,10 +15,15 @@ export const MAX_FILE_BYTES = 200 * 1024 * 1024; // 200 MB per file, a safety li
 
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
-  const kb = bytes / 1024;
-  if (kb < 1024) return `${kb < 10 ? kb.toFixed(1) : Math.round(kb)} KB`;
-  const mb = kb / 1024;
-  return `${mb < 10 ? mb.toFixed(2) : mb.toFixed(1)} MB`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let v = bytes / 1024;
+  let u = 0;
+  while (v >= 1024 && u < units.length - 1) {
+    v /= 1024;
+    u++;
+  }
+  const digits = u === 0 ? (v < 10 ? 1 : 0) : v < 10 ? 2 : v < 100 ? 1 : 0;
+  return `${Number(v.toFixed(digits))} ${units[u]}`;
 }
 
 export function baseName(name: string): string {

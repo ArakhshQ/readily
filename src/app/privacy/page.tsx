@@ -13,14 +13,31 @@ export default function Privacy() {
       <h1>Privacy</h1>
       <p className="updated">Last updated November 8, 2026</p>
 
-      <h2>Your files never leave your device</h2>
+      <h2>Your files stay on your device</h2>
       <p>
         Every Readily tool runs inside your web browser. When you choose a file, your browser reads it from your device and does the work
-        there. Readily has no server that receives, stores or looks at your files, so there is nothing for us to keep, share or lose.
+        there. Readily never receives the files you work on, so there is nothing for us to keep, share or lose, unless you choose to save a
+        result to your account (see below).
       </p>
       <p>
         Results you download are created on your device. When you close or reload the page, the files are gone from Readily, because they were
         only ever held in your browser&apos;s memory.
+      </p>
+
+      <h2>If you create an account</h2>
+      <p>
+        Using Readily never requires an account. If you choose to create one, we store your email address, your name if you give it, your plan,
+        and a password protected by our sign-in provider. While you&apos;re logged in, your dashboard records which tool you used and the names
+        and sizes of the results, never the files themselves. Free accounts keep this history for 30 days.
+      </p>
+      <p>
+        A file is only uploaded when you press &ldquo;Save to my files&rdquo;. Saved files are stored privately in your account, and our database
+        rules make them visible to you alone. You can delete any saved file, clear your history, or delete your whole account at any time from your
+        dashboard; deleting your account removes your saved files, history and profile.
+      </p>
+      <p>
+        Accounts, saved files and history are hosted by Supabase. Account emails, such as sign-up confirmations and password resets, are sent
+        through Brevo. Both process this data only to provide the service to us.
       </p>
 
       <h2>What the website itself receives</h2>

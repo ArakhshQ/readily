@@ -79,7 +79,7 @@ export function Workspace(p: Props) {
         </div>
       )}
       {p.error && <Message kind="error">{p.error}</Message>}
-      {p.outputs && <ResultPanel outputs={p.outputs} zipName={p.zipName} next={p.next} onRestart={p.onRestart} />}
+      {p.outputs && <ResultPanel tool={p.tool.slug} outputs={p.outputs} zipName={p.zipName} next={p.next} onRestart={p.onRestart} />}
     </div>
   );
 }
