@@ -195,3 +195,295 @@ export async function splitPdf(
   }
   return outputs;
 }
+
+// ---------------------------------------------------------------- shared placement
+
+type PdfPage = import("pdf-lib").PDFPage;
+
+const normRot = (a: number) => (((Math.round(a / 90) * 90) % 360) + 360) % 360;
+
+/** Size of a page as it looks when opened (rotation applied), in points. */
+function visualSize(page: PdfPage) {
+  const { width, height } = page.getCropBox();
+  return normRot(page.getRotation().angle) % 180 ? { w: height, h: width } : { w: width, h: height };
+}
+
+/**
+ * Converts a point measured on the page as it looks when opened (origin bottom-left)
+ * into the page's own coordinates, plus the rotation that makes drawings appear upright.
+ */
+function place(page: PdfPage, vx: number, vy: number) {
+  const rot = normRot(page.getRotation().angle);
+  const { x: bx, y: by, width: w, height: h } = page.getCropBox();
+  let x = vx;
+  let y = vy;
+  if (rot === 90) {
+    x = w - vy;
+    y = vx;
+  } else if (rot === 180) {
+    x = w - vx;
+    y = h - vy;
+  } else if (rot === 270) {
+    x = vy;
+    y = h - vx;
+  }
+  return { x: bx + x, y: by + y, rot };
+}
+
+function unsupportedText(): Error {
+  return new Error("That text has letters the built-in PDF font can't draw yet. Use English letters, numbers and common punctuation.");
+}
+
+// ---------------------------------------------------------------- compress
+
+export type CompressLevel = "lossless" | "balanced" | "strong";
+
+export async function compressPdf(file: File, level: CompressLevel, onProgress?: (p: number) => void): Promise<Output> {
+  const { PDFDocument } = await pdfLib();
+  const original = file.size;
+  let best: { blob: Blob; how: string } | null = null;
+
+  // Step 1: tidy the file's structure (keeps text selectable).
+  try {
+    const doc = await loadPdf(file);
+    const bytes = await doc.save({ useObjectStreams: true });
+    best = { blob: pdfBlob(bytes), how: "structure" };
+  } catch (e) {
+    if (e instanceof Error && /password/i.test(e.message)) throw e;
+  }
+  onProgress?.(0.1);
+
+  // Step 2: for stronger levels, redraw every page as a compressed image.
+  if (level !== "lossless") {
+    const { openPdf, renderPage } = await import("./pdf-render");
+    const src = await openPdf(file);
+    const dpi = level === "balanced" ? 144 : 96;
+    const quality = level === "balanced" ? 0.72 : 0.55;
+    const out = await PDFDocument.create();
+    out.setProducer("Readily");
+    for (let i = 1; i <= src.numPages; i++) {
+      const page = await src.getPage(i);
+      const vp = page.getViewport({ scale: 1 });
+      const canvas = await renderPage(src, i, dpi / 72);
+      const jpg = await canvasToBlob(canvas, "image/jpeg", quality);
+      const img = await out.embedJpg(await jpg.arrayBuffer());
+      const p = out.addPage([vp.width, vp.height]);
+      p.drawImage(img, { x: 0, y: 0, width: vp.width, height: vp.height });
+      canvas.width = canvas.height = 0;
+      onProgress?.(0.1 + (0.85 * i) / src.numPages);
+    }
+    await src.loadingTask.destroy();
+    const blob = pdfBlob(await out.save({ useObjectStreams: true }));
+    if (!best || blob.size < best.blob.size) best = { blob, how: "pages" };
+  }
+
+  const name = file.name.replace(/\.pdf$/i, "") + " (compressed).pdf";
+  if (!best || best.blob.size >= original * 0.98) {
+    return {
+      blob: file,
+      name: file.name,
+      checks: [formatBytes(original), "Original kept"],
+      note:
+        level === "lossless"
+          ? "This PDF is already compact. Try \"Balanced\" or \"Smallest\" for more savings, which turns pages into images."
+          : "Readily couldn't make this PDF meaningfully smaller, so your original was kept unchanged.",
+    };
+  }
+  const saved = Math.round((1 - best.blob.size / original) * 100);
+  return {
+    blob: best.blob,
+    name,
+    checks: [`${saved}% smaller`, `${formatBytes(best.blob.size)} (was ${formatBytes(original)})`],
+    note: best.how === "pages" ? "Pages were saved as images, so text in this copy can't be selected or searched. Keep your original for that." : undefined,
+  };
+}
+
+// ---------------------------------------------------------------- PDF to images
+
+export async function pdfToImages(
+  file: File,
+  opts: { dpi: number; format: "image/jpeg" | "image/png"; ranges: string | null },
+  onProgress?: (p: number) => void,
+): Promise<Output[]> {
+  const { openPdf, renderPage } = await import("./pdf-render");
+  const doc = await openPdf(file);
+  const total = doc.numPages;
+  const pages = opts.ranges ? parseRanges(opts.ranges, total).map((i) => i + 1) : Array.from({ length: total }, (_, i) => i + 1);
+  const stem = baseName(file.name);
+  const pad = String(total).length;
+  const ext = opts.format === "image/png" ? "png" : "jpg";
+  const outputs: Output[] = [];
+  for (let k = 0; k < pages.length; k++) {
+    const n = pages[k];
+    const canvas = await renderPage(doc, n, opts.dpi / 72);
+    const blob = await canvasToBlob(canvas, opts.format, opts.format === "image/jpeg" ? 0.9 : undefined);
+    outputs.push({
+      blob,
+      name: `${stem} - page ${String(n).padStart(pad, "0")}.${ext}`,
+      checks: [`Page ${n}`, `${canvas.width} × ${canvas.height} px`, formatBytes(blob.size)],
+    });
+    canvas.width = canvas.height = 0;
+    onProgress?.((k + 1) / pages.length);
+  }
+  await doc.loadingTask.destroy();
+  return outputs;
+}
+
+// ---------------------------------------------------------------- organize
+
+export interface PagePlan {
+  /** Zero-based index of the page in the original file. */
+  index: number;
+  /** Extra clockwise rotation in degrees (0, 90, 180, 270). */
+  rotate: number;
+}
+
+export async function organizePdf(file: File, plan: PagePlan[]): Promise<Output> {
+  if (!plan.length) throw new Error("Keep at least one page.");
+  const { PDFDocument, degrees } = await pdfLib();
+  const src = await loadPdf(file);
+  const out = await PDFDocument.create();
+  out.setProducer("Readily");
+  const copied = await out.copyPages(
+    src,
+    plan.map((p) => p.index),
+  );
+  copied.forEach((page, k) => {
+    const extra = plan[k].rotate;
+    if (extra) page.setRotation(degrees(normRot(page.getRotation().angle + extra)));
+    out.addPage(page);
+  });
+  const blob = pdfBlob(await out.save());
+  const removed = src.getPageCount() - plan.length;
+  const turned = plan.filter((p) => p.rotate).length;
+  const checks = [pageWord(plan.length)];
+  if (removed) checks.push(`${removed} removed`);
+  if (turned) checks.push(`${turned} rotated`);
+  checks.push(formatBytes(blob.size));
+  return { blob, name: `${baseName(file.name)} (organized).pdf`, checks };
+}
+
+// ---------------------------------------------------------------- page numbers
+
+export type NumberPosition = "bl" | "bc" | "br" | "tl" | "tc" | "tr";
+export type NumberFormat = "n" | "page-n" | "page-n-of" | "n-of";
+
+export async function addPageNumbers(
+  file: File,
+  opts: { position: NumberPosition; format: NumberFormat; start: number; size: number; skipFirst: boolean },
+): Promise<Output> {
+  const { StandardFonts, rgb, degrees } = await pdfLib();
+  const doc = await loadPdf(file);
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const pages = doc.getPages();
+  const counted = pages.length - (opts.skipFirst ? 1 : 0);
+  pages.forEach((page, i) => {
+    if (opts.skipFirst && i === 0) return;
+    const n = opts.start + i - (opts.skipFirst ? 1 : 0);
+    const last = opts.start + counted - 1;
+    const text =
+      opts.format === "n" ? `${n}` : opts.format === "page-n" ? `Page ${n}` : opts.format === "page-n-of" ? `Page ${n} of ${last}` : `${n} / ${last}`;
+    const { w, h } = visualSize(page);
+    const tw = font.widthOfTextAtSize(text, opts.size);
+    const margin = Math.max(18, Math.min(w, h) * 0.04);
+    const col = opts.position[1];
+    const vx = col === "l" ? margin : col === "c" ? (w - tw) / 2 : w - margin - tw;
+    const vy = opts.position[0] === "b" ? margin : h - margin - opts.size * 0.75;
+    const at = place(page, vx, vy);
+    page.drawText(text, { x: at.x, y: at.y, size: opts.size, font, color: rgb(0.13, 0.15, 0.22), rotate: degrees(at.rot) });
+  });
+  const blob = pdfBlob(await doc.save());
+  return {
+    blob,
+    name: `${baseName(file.name)} (numbered).pdf`,
+    checks: [`${counted} pages numbered`, `Starts at ${opts.start}`, formatBytes(blob.size)],
+  };
+}
+
+// ---------------------------------------------------------------- watermark
+
+export async function watermarkPdf(
+  file: File,
+  opts: { text: string; size: number; opacity: number; color: [number, number, number]; diagonal: boolean; tile: boolean },
+): Promise<Output> {
+  const { StandardFonts, rgb, degrees } = await pdfLib();
+  const text = opts.text.trim();
+  if (!text) throw new Error("Type the watermark text first.");
+  const doc = await loadPdf(file);
+  const font = await doc.embedFont(StandardFonts.HelveticaBold);
+  let tw: number;
+  try {
+    tw = font.widthOfTextAtSize(text, opts.size);
+  } catch {
+    throw unsupportedText();
+  }
+  const cap = font.heightAtSize(opts.size, { descender: false });
+  const a = opts.diagonal ? Math.PI / 4 : 0;
+  const color = rgb(...opts.color);
+
+  for (const page of doc.getPages()) {
+    const { w, h } = visualSize(page);
+    const centers: [number, number][] = [];
+    if (opts.tile) {
+      const stepX = tw * Math.cos(a) + opts.size * 3;
+      const stepY = opts.size * 5 + tw * Math.sin(a) * 0.6;
+      for (let cy = stepY / 2; cy < h + stepY; cy += stepY) {
+        const shift = Math.round(cy / stepY) % 2 ? stepX / 2 : 0;
+        for (let cx = -stepX / 2 + shift; cx < w + stepX; cx += stepX) centers.push([cx, cy]);
+      }
+    } else {
+      centers.push([w / 2, h / 2]);
+    }
+    for (const [cx, cy] of centers) {
+      // Start point so the text's middle sits on the center, after rotating by a.
+      const vx = cx - (tw / 2) * Math.cos(a) + (cap / 2) * Math.sin(a);
+      const vy = cy - (tw / 2) * Math.sin(a) - (cap / 2) * Math.cos(a);
+      const at = place(page, vx, vy);
+      page.drawText(text, {
+        x: at.x,
+        y: at.y,
+        size: opts.size,
+        font,
+        color,
+        opacity: opts.opacity,
+        rotate: degrees(at.rot + (a * 180) / Math.PI),
+      });
+    }
+  }
+  const blob = pdfBlob(await doc.save());
+  return {
+    blob,
+    name: `${baseName(file.name)} (watermarked).pdf`,
+    checks: [`“${text}” on ${pageWord(doc.getPageCount())}`, formatBytes(blob.size)],
+  };
+}
+
+// ---------------------------------------------------------------- sign
+
+/**
+ * Places a PNG signature on one page. x, y and width are fractions of the page
+ * as it looks when opened: x/y are the signature's top-left corner.
+ */
+export async function signPdf(
+  file: File,
+  signature: { png: Blob; width: number; height: number },
+  spot: { page: number; x: number; y: number; w: number },
+): Promise<Output> {
+  const { degrees } = await pdfLib();
+  const doc = await loadPdf(file);
+  const page = doc.getPage(spot.page);
+  const img = await doc.embedPng(await signature.png.arrayBuffer());
+  const { w, h } = visualSize(page);
+  const sw = spot.w * w;
+  const sh = (sw * signature.height) / signature.width;
+  const vx = spot.x * w;
+  const vy = (1 - spot.y) * h - sh;
+  const at = place(page, vx, vy);
+  page.drawImage(img, { x: at.x, y: at.y, width: sw, height: sh, rotate: degrees(at.rot) });
+  const blob = pdfBlob(await doc.save());
+  return {
+    blob,
+    name: `${baseName(file.name)} (signed).pdf`,
+    checks: [`Signed on page ${spot.page + 1}`, pageWord(doc.getPageCount()), formatBytes(blob.size)],
+  };
+}

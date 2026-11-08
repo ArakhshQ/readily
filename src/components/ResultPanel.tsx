@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Check, Download, Refresh } from "./Icons";
+import { Check, Copy, Download, Refresh } from "./Icons";
 import { Message } from "./Message";
 import { downloadBlob, zipOutputs, type Output } from "@/lib/files";
 import { blobToFile, setHandoff } from "@/lib/handoff";
@@ -21,6 +21,7 @@ export function ResultPanel({ outputs, zipName, next, onRestart }: Props) {
   const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
   const [zipping, setZipping] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     ref.current?.focus();
@@ -69,6 +70,27 @@ export function ResultPanel({ outputs, zipName, next, onRestart }: Props) {
                 ))}
               </ul>
               {o.note && <Message kind="note">{o.note}</Message>}
+              {o.preview !== undefined && o.preview.length > 0 && (
+                <div className="text-preview">
+                  <textarea readOnly value={o.preview} aria-label="Recognized text" rows={10} />
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(o.preview ?? "");
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      } catch {
+                        setCopied(false);
+                      }
+                    }}
+                  >
+                    <Copy size={18} />
+                    {copied ? "Copied" : "Copy text"}
+                  </button>
+                </div>
+              )}
             </div>
             <button type="button" className={`btn ${many ? "btn-secondary" : "btn-primary"}`} onClick={() => downloadBlob(o.blob, o.name)}>
               <Download size={18} />

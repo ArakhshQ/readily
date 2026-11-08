@@ -26,6 +26,10 @@ interface Props {
   onRun: () => void;
   busy: boolean;
   progress: number;
+  /** Optional live message while working, e.g. "Reading page 2 of 5". */
+  status?: string | null;
+  /** Shown instead of the file list (custom editors like page grids). */
+  hideList?: boolean;
   error: string | null;
   outputs: Output[] | null;
   zipName: string;
@@ -47,7 +51,7 @@ export function Workspace(p: Props) {
         />
       ) : (
         <>
-          <FileList heading={p.listHeading} items={p.items} onChange={p.setItems} reorder={p.reorder} />
+          {!p.hideList && <FileList heading={p.listHeading} items={p.items} onChange={p.setItems} reorder={p.reorder} />}
           <Dropzone compact accept={p.tool.accept} multiple={p.tool.multiple} onFiles={p.add} />
         </>
       )}
@@ -65,7 +69,15 @@ export function Workspace(p: Props) {
         </div>
       )}
 
-      {p.busy && <Progress value={p.progress} label={p.busyLabel} />}
+      {p.busy && (
+        <div style={{ display: "grid", gap: 8 }}>
+          <Progress value={p.progress} label={p.status || p.busyLabel} />
+          <p className="status-line">
+            {p.status || p.busyLabel}
+            {p.progress > 0 && p.progress < 1 ? ` · ${Math.round(p.progress * 100)}%` : ""}
+          </p>
+        </div>
+      )}
       {p.error && <Message kind="error">{p.error}</Message>}
       {p.outputs && <ResultPanel outputs={p.outputs} zipName={p.zipName} next={p.next} onRestart={p.onRestart} />}
     </div>

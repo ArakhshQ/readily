@@ -12,7 +12,7 @@ services:
         value: "22"
       # Change to your real domain once it's connected, e.g. https://readily.app
       - key: NEXT_PUBLIC_SITE_URL
-        value: https://readily.onrender.com
+        value: https://readily-3zay.onrender.com
     headers:
       - path: /*
         name: X-Content-Type-Options

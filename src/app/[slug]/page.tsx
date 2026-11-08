@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Lock, ToolGlyph } from "@/components/Icons";
 import { ToolRunner } from "@/components/ToolRunner";
 import { SITE } from "@/lib/site";
-import { TOOLS, TOOL_BY_SLUG, type ToolSlug } from "@/lib/tools";
+import { CATEGORIES, TOOLS, TOOL_BY_SLUG, type ToolSlug } from "@/lib/tools";
 
 export const dynamicParams = false;
 
@@ -31,6 +31,7 @@ export default async function ToolPage({ params }: Params) {
   const { slug } = await params;
   const tool = TOOL_BY_SLUG[slug as ToolSlug];
   if (!tool) notFound();
+  const cat = CATEGORIES.find((c) => c.id === tool.category)!;
 
   const jsonLd = [
     {
@@ -56,7 +57,7 @@ export default async function ToolPage({ params }: Params) {
       <div className="wrap narrow">
         <div className="tool-head">
           <nav className="crumbs" aria-label="Breadcrumb">
-            <Link href="/">Readily</Link> / <Link href="/tools/">{tool.category === "pdf" ? "PDF tools" : "Image tools"}</Link>
+            <Link href="/">Readily</Link> / <Link href={cat.path}>{cat.name}</Link>
           </nav>
           <h1>{tool.title}</h1>
           <p className="promise">{tool.promise}</p>

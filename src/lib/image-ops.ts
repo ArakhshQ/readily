@@ -229,3 +229,59 @@ export async function convertImage(file: File, target: OutFormat, quality = 0.92
     note,
   };
 }
+
+// ---------------------------------------------------------------- HEIC
+
+export async function heicToImage(file: File, target: "image/jpeg" | "image/png", quality = 0.92): Promise<Output[]> {
+  const { default: heic2any } = await import("heic2any");
+  let result: Blob | Blob[];
+  try {
+    result = await heic2any({ blob: file, toType: target, quality });
+  } catch (e) {
+    // Some "HEIC" files are really JPGs with the wrong name; the browser can open those directly.
+    const msg = (e as { message?: string })?.message || "";
+    if (/already browser readable/i.test(msg)) return [await convertImage(file, target, quality)];
+    throw new Error(`${file.name} couldn't be converted. It may be damaged or not a real HEIC photo.`);
+  }
+  const blobs = Array.isArray(result) ? result : [result];
+  const ext = target === "image/png" ? "png" : "jpg";
+  const outs: Output[] = [];
+  for (let i = 0; i < blobs.length; i++) {
+    const b = blobs[i];
+    const img = await loadImage(b);
+    outs.push({
+      blob: b,
+      name: blobs.length > 1 ? `${withExt(file.name, ext).replace(`.${ext}`, ` (${i + 1}).${ext}`)}` : withExt(file.name, ext),
+      checks: [FORMAT_LABEL[target], `${img.naturalWidth} × ${img.naturalHeight} px`, formatBytes(b.size), `was ${formatBytes(file.size)} HEIC`],
+    });
+  }
+  return outs;
+}
+
+// ---------------------------------------------------------------- crop
+
+export async function cropImage(file: File, rect: { x: number; y: number; w: number; h: number }, format: OutFormat | "same"): Promise<Output> {
+  const img = await loadImage(file);
+  const { format: fmt, note } = await usableFormat(format === "same" ? sameFormat(file) : format);
+  const x = Math.max(0, Math.round(rect.x));
+  const y = Math.max(0, Math.round(rect.y));
+  const w = Math.max(1, Math.min(img.naturalWidth - x, Math.round(rect.w)));
+  const h = Math.max(1, Math.min(img.naturalHeight - y, Math.round(rect.h)));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Your browser blocked image processing. Try another browser.");
+  if (fmt === "image/jpeg") {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+  }
+  ctx.drawImage(img, x, y, w, h, 0, 0, w, h);
+  const blob = await canvasToBlob(canvas, fmt, fmt === "image/png" ? undefined : 0.92);
+  return {
+    blob,
+    name: withExt(file.name, extFor(fmt)).replace(/(\.[a-z]+)$/, `-cropped$1`),
+    checks: [`${w} × ${h} px`, `was ${img.naturalWidth} × ${img.naturalHeight}`, FORMAT_LABEL[fmt], formatBytes(blob.size)],
+    note,
+  };
+}

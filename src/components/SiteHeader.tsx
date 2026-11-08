@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "./Icons";
+import { ToolsMenu } from "./ToolsMenu";
 
 export function SiteHeader() {
   return (
@@ -12,13 +13,15 @@ export function SiteHeader() {
           <Logo />
           Readily
         </Link>
+        <ToolsMenu />
         <nav className="nav" aria-label="Main">
           <span className="menu-group">
-            <Link href="/jpg-to-pdf/">Images to PDF</Link>
-            <Link href="/merge-pdf/">Merge PDF</Link>
-            <Link href="/compress-image/">Compress image</Link>
+            <Link href="/pdf-tools/">PDF</Link>
+            <Link href="/image-tools/">Image</Link>
+            <Link href="/video-tools/">Video</Link>
+            <Link href="/audio-tools/">Audio</Link>
           </span>
-          <Link href="/tools/">All tools</Link>
+          {/* Pricing and account links are added in the plans and accounts steps. */}
         </nav>
       </div>
     </header>

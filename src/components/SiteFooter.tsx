@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { Logo } from "./Icons";
-import { TOOLS } from "@/lib/tools";
+import { CATEGORIES, TOOLS } from "@/lib/tools";
 
 export function SiteFooter() {
-  const pdf = TOOLS.filter((t) => t.category === "pdf");
-  const image = TOOLS.filter((t) => t.category === "image");
   return (
     <footer className="site-footer">
       <div className="wrap">
@@ -16,26 +14,20 @@ export function SiteFooter() {
             </Link>
             <p>Free file tools that run on your device. Nothing to install, nothing uploaded.</p>
           </div>
-          <div>
-            <h3>PDF tools</h3>
-            <ul>
-              {pdf.map((t) => (
-                <li key={t.slug}>
-                  <Link href={`/${t.slug}/`}>{t.name}</Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h3>Image tools</h3>
-            <ul>
-              {image.map((t) => (
-                <li key={t.slug}>
-                  <Link href={`/${t.slug}/`}>{t.name}</Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {CATEGORIES.map((c) => (
+            <div key={c.id}>
+              <h3>
+                <Link href={c.path}>{c.name}</Link>
+              </h3>
+              <ul>
+                {TOOLS.filter((t) => t.category === c.id).map((t) => (
+                  <li key={t.slug}>
+                    <Link href={`/${t.slug}/`}>{t.name}</Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
           <div>
             <h3>Readily</h3>
             <ul>

@@ -7,6 +7,8 @@ export interface Output {
   checks: string[];
   /** Optional note when something didn't go exactly as asked. */
   note?: string;
+  /** Text to show inline (for example OCR results), with a copy button. */
+  preview?: string;
 }
 
 export const MAX_FILE_BYTES = 200 * 1024 * 1024; // 200 MB per file, a safety limit for phones
@@ -34,6 +36,7 @@ export function extFor(mime: string): string {
   if (mime === "image/webp") return "webp";
   if (mime === "application/pdf") return "pdf";
   if (mime === "application/zip") return "zip";
+  if (mime === "text/plain") return "txt";
   return "bin";
 }
 
@@ -43,6 +46,32 @@ export function isPdf(file: File): boolean {
 
 export function isImage(file: File): boolean {
   return file.type.startsWith("image/") || /\.(jpe?g|png|webp|gif|bmp|avif|heic|heif)$/i.test(file.name);
+}
+
+export function isHeic(file: File): boolean {
+  return /heic|heif/i.test(file.type) || /\.(heic|heif)$/i.test(file.name);
+}
+
+export function isVideo(file: File): boolean {
+  return file.type.startsWith("video/") || /\.(mp4|mov|webm|mkv|m4v|avi|3gp)$/i.test(file.name);
+}
+
+export function isAudio(file: File): boolean {
+  return (
+    (file.type.startsWith("audio/") || /\.(mp3|wav|m4a|aac|ogg|oga|opus|flac|wma|amr)$/i.test(file.name)) &&
+    !/\.(mp4|mov|mkv|m4v)$/i.test(file.name)
+  );
+}
+
+/** Readable duration like 1:05 or 1:02:03. */
+export function formatTime(sec: number): string {
+  if (!isFinite(sec) || sec < 0) sec = 0;
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  const t = Math.floor((sec % 1) * 10);
+  const mm = h ? String(m).padStart(2, "0") : String(m);
+  return `${h ? `${h}:` : ""}${mm}:${String(s).padStart(2, "0")}${t ? `.${t}` : ""}`;
 }
 
 export function downloadBlob(blob: Blob, filename: string): void {

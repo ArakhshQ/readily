@@ -21,7 +21,7 @@ export default function Home() {
           <div>
             <h1>Get any file ready for wherever it&apos;s going.</h1>
             <p className="hero-lead">
-              Turn photos into a PDF, merge and split PDFs, or shrink an image to the exact size a form asks for.
+              {TOOLS.length} free tools for PDFs, images, video and audio. Shrink a photo to the size a form asks for, sign a PDF, or trim a video.
             </p>
             <ul className="hero-facts">
               {["Runs on your device. Files are never uploaded.", "Free, with no signup and no watermark.", "Hit exact targets like 200 KB or 600 × 600 px."].map((t) => (
@@ -40,7 +40,7 @@ export default function Home() {
 
       <section className="section">
         <div className="wrap">
-          <ToolDirectory heading="Every tool" intro={`${TOOLS.length} tools, each on its own page. More are on the way.`} />
+          <ToolDirectory heading="Every tool" intro={`${TOOLS.length} tools in four groups. Search, or pick one below.`} />
         </div>
       </section>
 

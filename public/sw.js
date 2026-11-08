@@ -1,7 +1,7 @@
 // Readily service worker: lets the site install as an app and open offline.
 // It caches Readily's own pages and code only. User files are never stored.
-const VERSION = "readily-v1";
-const PAGES = ["/", "/tools/", "/jpg-to-pdf/", "/merge-pdf/", "/split-pdf/", "/compress-image/", "/resize-image/", "/convert-image/"];
+const VERSION = "readily-v2";
+const PAGES = ["/", "/tools/", "/pdf-tools/", "/image-tools/", "/video-tools/", "/audio-tools/"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -42,8 +42,9 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Big engines (video, OCR) are cached after first use so tools work offline later.
   // Built assets have unique names, so a saved copy is always correct.
-  if (url.pathname.startsWith("/_next/static/") || /\.(woff2?|png|svg|webmanifest)$/.test(url.pathname)) {
+  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/vendor/") || /\.(woff2?|png|svg|webmanifest)$/.test(url.pathname)) {
     event.respondWith(
       caches.match(req).then(
         (hit) =>

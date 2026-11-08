@@ -96,6 +96,62 @@ export const Refresh = (p: P) => (
     <path d="M4 13a8 8 0 0 0 14.5 4.5L20 16M20 20v-4h-4" />
   </Svg>
 );
+export const Menu = (p: P) => (
+  <Svg {...p}>
+    <path d="M4 7h16M4 12h16M4 17h16" />
+  </Svg>
+);
+export const Grid = (p: P) => (
+  <Svg {...p}>
+    <rect x="4" y="4" width="6" height="6" rx="1" />
+    <rect x="14" y="4" width="6" height="6" rx="1" />
+    <rect x="4" y="14" width="6" height="6" rx="1" />
+    <rect x="14" y="14" width="6" height="6" rx="1" />
+  </Svg>
+);
+export const User = (p: P) => (
+  <Svg {...p}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 21c1-4 4.5-6 8-6s7 2 8 6" />
+  </Svg>
+);
+export const Copy = (p: P) => (
+  <Svg {...p}>
+    <rect x="8" y="8" width="12" height="12" rx="2" />
+    <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+  </Svg>
+);
+export const RotateCw = (p: P) => (
+  <Svg {...p}>
+    <path d="M20 12a8 8 0 1 1-2.5-5.8L20 8.5M20 4v4.5h-4.5" />
+  </Svg>
+);
+export const RotateCcw = (p: P) => (
+  <Svg {...p}>
+    <path d="M4 12a8 8 0 1 0 2.5-5.8L4 8.5M4 4v4.5h4.5" />
+  </Svg>
+);
+export const ArrowLeft = (p: P) => (
+  <Svg {...p}>
+    <path d="M19 12H5M11 6l-6 6 6 6" />
+  </Svg>
+);
+export const Trash = (p: P) => (
+  <Svg {...p}>
+    <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+  </Svg>
+);
+export const Cloud = (p: P) => (
+  <Svg {...p}>
+    <path d="M7 18a5 5 0 0 1-.5-10A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 9z" />
+    <path d="M12 16v-5M9.5 13.5L12 11l2.5 2.5" />
+  </Svg>
+);
+export const Star = (p: P) => (
+  <Svg {...p}>
+    <path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" />
+  </Svg>
+);
 export const FileIcon = (p: P) => (
   <Svg {...p}>
     <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
@@ -141,6 +197,95 @@ const glyphs: Record<ToolSlug, (p: P) => React.ReactElement> = {
   "convert-image": (p) => (
     <Svg {...p}>
       <path d="M4 8h13l-3-3M20 16H7l3 3" />
+    </Svg>
+  ),
+  "compress-pdf": (p) => (
+    <Svg {...p}>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M12 9v3M10 10.5l2 2 2-2M12 18v-3M10 16.5l2-2 2 2" />
+    </Svg>
+  ),
+  "pdf-to-jpg": (p) => (
+    <Svg {...p}>
+      <path d="M9 3H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4" />
+      <rect x="11" y="9" width="10" height="12" rx="1.5" />
+      <path d="M11 18l3-3 2 2 2-2 3 3" />
+    </Svg>
+  ),
+  "organize-pdf": (p) => (
+    <Svg {...p}>
+      <rect x="3" y="3" width="7" height="8" rx="1.5" />
+      <rect x="14" y="3" width="7" height="8" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <path d="M14 17.5h7M18 14.5l3 3-3 3" />
+    </Svg>
+  ),
+  "add-page-numbers": (p) => (
+    <Svg {...p}>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M11 15l1.5-1.5V19M14 3v5h5" />
+    </Svg>
+  ),
+  "watermark-pdf": (p) => (
+    <Svg {...p}>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M8 17l8-8M14 3v5h5" />
+    </Svg>
+  ),
+  "sign-pdf": (p) => (
+    <Svg {...p}>
+      <path d="M3 17c3-1 4-6 6-6s0 6 2 6 3-3 4-3 1 2 2 2h4" />
+      <path d="M3 21h18" />
+    </Svg>
+  ),
+  "heic-to-jpg": (p) => (
+    <Svg {...p}>
+      <rect x="6" y="2" width="12" height="20" rx="3" />
+      <circle cx="12" cy="10" r="3" />
+      <path d="M10 18h4" />
+    </Svg>
+  ),
+  "crop-image": (p) => (
+    <Svg {...p}>
+      <path d="M6 2v14a2 2 0 0 0 2 2h14M2 6h14a2 2 0 0 1 2 2v14" />
+    </Svg>
+  ),
+  "image-to-text": (p) => (
+    <Svg {...p}>
+      <path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3" />
+      <path d="M8 9h8M12 9v7" />
+    </Svg>
+  ),
+  "trim-video": (p) => (
+    <Svg {...p}>
+      <circle cx="6" cy="6" r="3" />
+      <circle cx="6" cy="18" r="3" />
+      <path d="M8.5 7.5L20 18M8.5 16.5L20 6" />
+    </Svg>
+  ),
+  "compress-video": (p) => (
+    <Svg {...p}>
+      <rect x="2" y="5" width="14" height="14" rx="2" />
+      <path d="M16 10l6-3v10l-6-3" />
+      <path d="M6 9l3 3 3-3M9 12V8" />
+    </Svg>
+  ),
+  "video-to-mp3": (p) => (
+    <Svg {...p}>
+      <path d="M9 18V6l11-2v12" />
+      <circle cx="6" cy="18" r="3" />
+      <circle cx="17" cy="16" r="3" />
+    </Svg>
+  ),
+  "convert-audio": (p) => (
+    <Svg {...p}>
+      <path d="M3 10v4M7 7v10M11 4v16M15 8v8M19 11v2" />
+    </Svg>
+  ),
+  "trim-audio": (p) => (
+    <Svg {...p}>
+      <path d="M3 12h2M7 9v6M11 6v12" />
+      <path d="M15 4v16M15 4h5M15 20h5" strokeDasharray="0" />
     </Svg>
   ),
 };

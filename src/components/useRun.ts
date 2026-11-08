@@ -9,22 +9,28 @@ export function useRun() {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [outputs, setOutputs] = useState<Output[] | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
 
-  const run = useCallback(async (work: (report: (p: number) => void) => Promise<Output[]>) => {
+  const run = useCallback(async (work: (report: (p: number, label?: string) => void) => Promise<Output[]>) => {
     setBusy(true);
     setError(null);
     setOutputs(null);
     setProgress(0);
+    setStatus(null);
     // Let the button state paint before heavy work starts.
     await new Promise((r) => setTimeout(r, 30));
     try {
-      const out = await work((p) => setProgress(p));
+      const out = await work((p, label) => {
+        setProgress(p);
+        if (label) setStatus(label);
+      });
       setProgress(1);
       setOutputs(out);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong. Try again with a different file.");
     } finally {
       setBusy(false);
+      setStatus(null);
     }
   }, []);
 
@@ -34,5 +40,5 @@ export function useRun() {
     setProgress(0);
   }, []);
 
-  return { busy, progress, error, outputs, run, reset, setError };
+  return { busy, progress, error, outputs, run, reset, setError, status };
 }
