@@ -1,0 +1,6 @@
+# Supabase CLI settings for Readily's edge functions (see docs/LAUNCH.md).
+project_id = "readily"
+
+# Stripe signs its webhook requests, so that function skips the usual login check.
+[functions.stripe-webhook]
+verify_jwt = false

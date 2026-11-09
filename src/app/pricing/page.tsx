@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Check } from "@/components/Icons";
+import { Suspense } from "react";
+import { PlanCards } from "@/components/PlanCards";
+import { SITE } from "@/lib/site";
+import { paymentsEnabled } from "@/lib/billing";
 import { PAID_TOOLS, PLANS, PLAN_BY_ID, allowance, type Level } from "@/lib/plans";
 
 export const metadata: Metadata = {
@@ -8,6 +11,7 @@ export const metadata: Metadata = {
   description:
     "Readily's 20 everyday file tools are free. Basic, Pro and Premium add pro-quality tools and AI for voice, photos, video and documents.",
   alternates: { canonical: "/pricing/" },
+  openGraph: { url: "/pricing/", title: "Readily plans: Free, Basic, Pro and Premium" },
 };
 
 const LEVELS: { level: Level; name: string; note: string }[] = [
@@ -30,8 +34,12 @@ const FAQ = [
     a: "No, credits refresh at the start of each billing month.",
   },
   {
-    q: "When can I buy a plan?",
-    a: "The paid tools are being built now. Join a waitlist and we'll email you when your plan opens. No card is needed, and every free tool keeps working.",
+    q: "How do I pay?",
+    a: "By card through Stripe, monthly or yearly. Readily never sees or stores your card number. You can change plan, update your card, download invoices or cancel any time from your dashboard.",
+  },
+  {
+    q: "Can I get a refund?",
+    a: "If something isn't right, email us within 14 days of your first payment and we'll refund it. See the refund policy for details.",
   },
   {
     q: "Do AI tools upload my files?",
@@ -45,56 +53,36 @@ const FAQ = [
 
 export default function Pricing() {
   const paid = PLANS.filter((p) => p.id !== "free");
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: SITE.name,
+    url: `${SITE.url}/`,
+    applicationCategory: "UtilitiesApplication",
+    operatingSystem: "Any (runs in the browser)",
+    offers: PLANS.map((p) => ({
+      "@type": "Offer",
+      name: p.name,
+      price: p.price.replace("$", ""),
+      priceCurrency: "USD",
+      description: p.tagline,
+      ...(p.id !== "free" ? { priceSpecification: { "@type": "UnitPriceSpecification", price: p.price.replace("$", ""), priceCurrency: "USD", unitCode: "MON" } } : {}),
+    })),
+  };
   return (
     <div className="wrap pricing">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="pricing-head">
         <h1>Everyday tools are free. Pay for pro results.</h1>
         <p>
           All 20 everyday tools stay free for everyone. Plans add higher-quality tools and AI for voice, photos, video and documents.
         </p>
-        <p className="pricing-soon">Paid tools are being built now. Join a waitlist and we&apos;ll email you when your plan opens.</p>
+        {!paymentsEnabled && <p className="pricing-soon">Paid plans open soon. Join a waitlist, or sign up free to try every Basic and Pro tool once.</p>}
       </div>
 
-      <div className="plans plans-4">
-        {PLANS.map((p) => (
-          <section key={p.id} className={`plan${p.highlight ? " plan-hi" : ""}`} aria-labelledby={`plan-${p.id}`}>
-            {p.highlight && <p className="plan-flag">Most popular</p>}
-            <h2 id={`plan-${p.id}`}>{p.name}</h2>
-            <p className="plan-price">
-              <strong>{p.price}</strong> <span>{p.period}</span>
-            </p>
-            <p className="plan-yearly">{p.yearly ? `or ${p.yearly} a year` : " "}</p>
-            <p className="plan-tagline">{p.tagline}</p>
-            {p.id === "free" ? (
-              <div className="plan-ctas">
-                <Link href="/tools/" className="btn btn-secondary btn-block">
-                  Use the tools
-                </Link>
-                <Link href="/signup/" className="btn btn-primary btn-block">
-                  Sign up free
-                </Link>
-              </div>
-            ) : (
-              <div className="plan-ctas">
-                <Link href={`/signup/?plan=${p.id}`} className={`btn ${p.highlight ? "btn-primary" : "btn-secondary"} btn-block`}>
-                  Join the waitlist
-                </Link>
-                <p className="plan-note">No card needed</p>
-              </div>
-            )}
-            <ul className="plan-features">
-              {p.highlights.map((f) => (
-                <li key={f}>
-                  <span className="tick">
-                    <Check size={13} strokeWidth={3} />
-                  </span>
-                  <span>{f}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
-      </div>
+      <Suspense fallback={<div className="plans plans-4" style={{ minHeight: 600 }} />}>
+        <PlanCards />
+      </Suspense>
 
       <section className="section" aria-labelledby="compare-h">
         <h2 id="compare-h">Every tool, plan by plan</h2>

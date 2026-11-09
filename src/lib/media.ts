@@ -246,3 +246,240 @@ export async function toAudio(
   if (format !== "wav") checks.splice(1, 0, `${(opts.bitrate || "192k").replace("k", " kbps")}`);
   return { blob, name: `${baseName(file.name)}${trimmed ? " (trimmed)" : ""}.${format}`, checks };
 }
+
+// ---------------------------------------------------------------- multi-input jobs
+
+export interface FfInput {
+  name: string;
+  data: Blob | Uint8Array;
+}
+
+/** Runs ffmpeg with several input files and returns one output file. */
+export function ffRun(opts: {
+  inputs: FfInput[];
+  args: string[];
+  output: string;
+  mime: string;
+  expected?: number;
+  label: string;
+  onProgress?: (p: number, label: string) => void;
+}): Promise<Blob> {
+  const task = queue.then(async () => {
+    opts.onProgress?.(0, "Loading the audio and video engine (first time only)");
+    const ff = await engine();
+    const onProg = ({ time }: { time: number }) => {
+      const s = time / 1_000_000;
+      if (opts.expected && s > 0) opts.onProgress?.(Math.min(0.99, s / opts.expected), opts.label);
+    };
+    let lastLog = "";
+    const onLog = ({ message }: { message: string }) => {
+      if (/error|invalid|not supported|could not|no such/i.test(message)) lastLog = message;
+    };
+    ff.on("progress", onProg);
+    ff.on("log", onLog);
+    try {
+      for (const i of opts.inputs) {
+        const bytes = i.data instanceof Blob ? new Uint8Array(await i.data.arrayBuffer()) : i.data;
+        await ff.writeFile(i.name, bytes);
+      }
+      const code = await ff.exec(opts.args);
+      if (code !== 0) throw new Error(lastLog || "processing failed");
+      const data = (await ff.readFile(opts.output)) as Uint8Array;
+      if (!data.length) throw new Error("the result was empty");
+      return new Blob([data as BlobPart], { type: opts.mime });
+    } catch (e) {
+      const why = e instanceof Error ? e.message : String(e);
+      throw new Error(`This file couldn't be processed (${why.slice(0, 160)}). It may be damaged or in a format this browser can't decode.`);
+    } finally {
+      ff.off("progress", onProg);
+      ff.off("log", onLog);
+      for (const i of opts.inputs) await ff.deleteFile(i.name).catch(() => {});
+      await ff.deleteFile(opts.output).catch(() => {});
+    }
+  });
+  queue = task.catch(() => {});
+  return task;
+}
+
+export function isVideoFile(file: File): boolean {
+  return file.type.startsWith("video/") || /\.(mp4|mov|webm|mkv|m4v|avi|3gp)$/i.test(file.name);
+}
+
+function inName(file: File, base = "in") {
+  const ext = (file.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "") || "bin";
+  return `${base}.${ext}`;
+}
+
+/** Decodes the sound of any audio or video file to 48 kHz mono samples. */
+export async function decodeMono48k(file: File, duration: number, onProgress?: (p: number, label: string) => void): Promise<Float32Array> {
+  const name = inName(file);
+  const blob = await ffRun({
+    inputs: [{ name, data: file }],
+    args: ["-i", name, "-vn", "-ac", "1", "-ar", "48000", "-f", "f32le", "-c:a", "pcm_f32le", "out.raw"],
+    output: "out.raw",
+    mime: "application/octet-stream",
+    expected: duration,
+    label: "Reading the sound",
+    onProgress,
+  });
+  return new Float32Array(await blob.arrayBuffer());
+}
+
+/** 48 kHz mono samples to a 16-bit WAV file. */
+export function samplesToWav(samples: Float32Array, rate = 48000): Blob {
+  const buf = new ArrayBuffer(44 + samples.length * 2);
+  const v = new DataView(buf);
+  const w = (o: number, s: string) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  w(0, "RIFF");
+  v.setUint32(4, 36 + samples.length * 2, true);
+  w(8, "WAVE");
+  w(12, "fmt ");
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true);
+  v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true);
+  v.setUint32(28, rate * 2, true);
+  v.setUint16(32, 2, true);
+  v.setUint16(34, 16, true);
+  w(36, "data");
+  v.setUint32(40, samples.length * 2, true);
+  let o = 44;
+  for (let i = 0; i < samples.length; i++, o += 2) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    v.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  }
+  return new Blob([buf], { type: "audio/wav" });
+}
+
+/**
+ * Puts processed sound back where it came from: into the original video (picture
+ * copied, not re-encoded), or into an audio file in the original format.
+ */
+export async function deliverAudio(
+  original: File,
+  audio: Blob,
+  audioName: string,
+  suffix: string,
+  duration: number,
+  onProgress?: (p: number, label: string) => void,
+): Promise<Output> {
+  const base = baseName(original.name);
+  if (isVideoFile(original)) {
+    const vin = inName(original, "video");
+    const blob = await ffRun({
+      inputs: [
+        { name: vin, data: original },
+        { name: audioName, data: audio },
+      ],
+      args: ["-i", vin, "-i", audioName, "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", "out.mp4"],
+      output: "out.mp4",
+      mime: "video/mp4",
+      expected: duration,
+      label: "Putting the sound back into your video",
+      onProgress,
+    });
+    return { blob, name: `${base} (${suffix}).mp4`, checks: ["Video picture unchanged", `${formatTime(duration)} long`, formatBytes(blob.size)] };
+  }
+  const blob = await ffRun({
+    inputs: [{ name: audioName, data: audio }],
+    args: ["-i", audioName, "-c:a", "libmp3lame", "-b:a", "192k", "out.mp3"],
+    output: "out.mp3",
+    mime: "audio/mpeg",
+    expected: duration,
+    label: "Saving as MP3",
+    onProgress,
+  });
+  return { blob, name: `${base} (${suffix}).mp3`, checks: ["MP3, 192 kbps", `${formatTime(duration)} long`, formatBytes(blob.size)] };
+}
+
+/** Cuts pauses longer than `minPause` seconds quieter than `threshold` dB, keeping `keep` seconds of each. */
+export async function removeSilences(
+  file: File,
+  opts: { minPause: number; threshold: number; keep: number; duration: number },
+  onProgress?: (p: number, label: string) => void,
+): Promise<Output> {
+  const name = inName(file);
+  const video = isVideoFile(file);
+  const base = baseName(file.name);
+  // Find the quiet stretches first, then keep everything else.
+  const detectLog: string[] = [];
+  const ff = await engine();
+  const onLog = ({ message }: { message: string }) => {
+    if (message.includes("silence_")) detectLog.push(message);
+  };
+  ff.on("log", onLog);
+  try {
+    await ffRun({
+      inputs: [{ name, data: file }],
+      args: ["-i", name, "-vn", "-af", `silencedetect=noise=${opts.threshold}dB:d=${opts.minPause}`, "-f", "null", "-"],
+      output: "-",
+      mime: "text/plain",
+      expected: opts.duration,
+      label: "Finding the pauses",
+      onProgress,
+    }).catch((e) => {
+      // "-" isn't a readable file; detection still ran if the log has results.
+      if (!detectLog.length && !/result was empty|couldn't be processed/.test(String(e))) throw e;
+    });
+  } finally {
+    ff.off("log", onLog);
+  }
+  const starts = detectLog.map((l) => l.match(/silence_start: ([\d.]+)/)?.[1]).filter(Boolean).map(Number);
+  const ends = detectLog.map((l) => l.match(/silence_end: ([\d.]+)/)?.[1]).filter(Boolean).map(Number);
+  const cuts: [number, number][] = [];
+  for (let i = 0; i < starts.length; i++) {
+    const s = starts[i] + opts.keep / 2;
+    const e = (ends[i] ?? opts.duration) - opts.keep / 2;
+    if (e - s > 0.05) cuts.push([s, e]);
+  }
+  if (!cuts.length) throw new Error("No pauses long enough to cut were found. Try a shorter pause length or a higher threshold.");
+  const removed = cuts.reduce((t, [s, e]) => t + (e - s), 0);
+  const keepExpr = cuts.map(([s, e]) => `between(t,${s.toFixed(3)},${e.toFixed(3)})`).join("+");
+  const sel = `not(${keepExpr})`;
+  const out = video ? "out.mp4" : "out.mp3";
+  const args = video
+    ? ["-i", name, "-vf", `select='${sel}',setpts=N/FRAME_RATE/TB`, "-af", `aselect='${sel}',asetpts=N/SR/TB`, "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", out]
+    : ["-i", name, "-af", `aselect='${sel}',asetpts=N/SR/TB`, "-c:a", "libmp3lame", "-b:a", "192k", out];
+  const blob = await ffRun({
+    inputs: [{ name, data: file }],
+    args,
+    output: out,
+    mime: video ? "video/mp4" : "audio/mpeg",
+    expected: Math.max(1, opts.duration - removed),
+    label: "Cutting the pauses",
+    onProgress,
+  });
+  return {
+    blob,
+    name: `${base} (no silences).${video ? "mp4" : "mp3"}`,
+    checks: [`${cuts.length} ${cuts.length === 1 ? "pause" : "pauses"} cut`, `${formatTime(removed)} shorter`, `${formatTime(Math.max(0, opts.duration - removed))} long`, formatBytes(blob.size)],
+  };
+}
+
+/** Compact mono MP3 of a file's sound, for sending to a speech AI. */
+export async function audioForUpload(file: File, duration: number, onProgress?: (p: number, label: string) => void): Promise<Blob> {
+  const name = inName(file);
+  return ffRun({
+    inputs: [{ name, data: file }],
+    args: ["-i", name, "-vn", "-ac", "1", "-ar", "44100", "-c:a", "libmp3lame", "-b:a", "128k", "-write_xing", "0", "upload.mp3"],
+    output: "upload.mp3",
+    mime: "audio/mpeg",
+    expected: duration,
+    label: "Preparing the sound",
+    onProgress,
+  });
+}
+
+/** H.264 MP4 no taller than maxHeight, for sending to a video AI. */
+export async function videoForUpload(file: File, duration: number, maxHeight: number, onProgress?: (p: number, label: string) => void): Promise<Blob> {
+  const name = inName(file);
+  return ffRun({
+    inputs: [{ name, data: file }],
+    args: ["-i", name, "-vf", `scale=-2:'min(${maxHeight},ih)'`, "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "upload.mp4"],
+    output: "upload.mp4",
+    mime: "video/mp4",
+    expected: duration,
+    label: "Preparing the video",
+    onProgress,
+  });
+}

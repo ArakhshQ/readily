@@ -8,6 +8,14 @@ import { CATEGORIES, TOOLS, TOOL_BY_SLUG, type ToolSlug } from "@/lib/tools";
 
 export const dynamicParams = false;
 
+const PLAN_PRICE: Record<number, string> = { 1: "4.99", 2: "11.99", 3: "29.99" };
+
+const SERVER_NOTE: Partial<Record<string, string>> = {
+  pdf: "Only the document's text is sent to Readily's AI, processed privately and never used for training.",
+  text: "Your script is processed privately by Readily's AI and never used for training.",
+  any: "Only your instruction and file names go to the AI. Your files are processed on your device.",
+};
+
 export function generateStaticParams() {
   return TOOLS.map((t) => ({ slug: t.slug }));
 }
@@ -23,7 +31,13 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     description: tool.seoDescription,
     keywords: tool.keywords,
     alternates: { canonical: `/${tool.slug}/` },
-    openGraph: { title: tool.seoTitle, description: tool.seoDescription, url: `/${tool.slug}/` },
+    openGraph: {
+      title: tool.seoTitle,
+      description: tool.seoDescription,
+      url: `/${tool.slug}/`,
+      images: [{ url: `/og/${tool.slug}.png`, width: 1200, height: 630, alt: tool.title }],
+    },
+    twitter: { card: "summary_large_image", title: tool.seoTitle, description: tool.seoDescription, images: [`/og/${tool.slug}.png`] },
   };
 }
 
@@ -41,8 +55,19 @@ export default async function ToolPage({ params }: Params) {
       url: `${SITE.url}/${tool.slug}/`,
       applicationCategory: "UtilitiesApplication",
       operatingSystem: "Any (runs in the browser)",
-      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+      offers: tool.level
+        ? { "@type": "Offer", price: PLAN_PRICE[tool.level], priceCurrency: "USD", description: "Monthly plan; one free try with a free account" }
+        : { "@type": "Offer", price: "0", priceCurrency: "USD" },
       description: tool.seoDescription,
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: SITE.name, item: `${SITE.url}/` },
+        { "@type": "ListItem", position: 2, name: cat.name, item: `${SITE.url}${cat.path}` },
+        { "@type": "ListItem", position: 3, name: tool.name, item: `${SITE.url}/${tool.slug}/` },
+      ],
     },
     {
       "@context": "https://schema.org",
@@ -61,10 +86,17 @@ export default async function ToolPage({ params }: Params) {
           </nav>
           <h1>{tool.title}</h1>
           <p className="promise">{tool.promise}</p>
-          <p className="local-badge">
-            <Lock size={16} />
-            Works on your device. Your files are never uploaded.
-          </p>
+          {tool.engine === "server" ? (
+            <p className="local-badge server-badge">
+              <Lock size={16} />
+              {SERVER_NOTE[tool.input] ?? "Processed privately on Readily's AI servers and deleted within 24 hours. Never used for training."}
+            </p>
+          ) : (
+            <p className="local-badge">
+              <Lock size={16} />
+              Works on your device. Your files are never uploaded.
+            </p>
+          )}
         </div>
 
         <ToolRunner slug={tool.slug} />

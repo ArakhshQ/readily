@@ -11,6 +11,37 @@ export interface Profile {
   plan: PlanId;
   plan_interest: PaidPlanId | null;
   created_at: string;
+  credits: number;
+  credits_refresh_at: string | null;
+  billing_interval: "month" | "year" | null;
+  subscription_status: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+}
+
+export interface AiJob {
+  id: string;
+  tool: string;
+  option: string | null;
+  status: "running" | "succeeded" | "failed";
+  credits: number;
+  output_path: string | null;
+  error: string | null;
+  created_at: string;
+}
+
+/** The user's recent AI jobs (results stay downloadable for 24 hours). */
+export async function listAiJobs(): Promise<AiJob[]> {
+  const sb = await getSupabase();
+  await userId();
+  const { data, error } = await sb
+    .from("ai_jobs")
+    .select("id, tool, option, status, credits, output_path, error, created_at")
+    .neq("tool", "assistant")
+    .order("created_at", { ascending: false })
+    .limit(12);
+  if (error) throw error;
+  return (data ?? []) as AiJob[];
 }
 
 export interface HistoryItem {
@@ -45,7 +76,13 @@ export async function getProfile(): Promise<Profile | null> {
   if (error) throw error;
   if (!data) return null;
   // Older rows may still use plan names from before the four-plan lineup.
-  return { ...(data as Profile), plan: toPlanId(data.plan), plan_interest: toPaidPlanId(data.plan_interest) };
+  return {
+    ...(data as Profile),
+    plan: toPlanId(data.plan),
+    plan_interest: toPaidPlanId(data.plan_interest),
+    credits: Number(data.credits ?? 0),
+    cancel_at_period_end: !!data.cancel_at_period_end,
+  };
 }
 
 export async function updateProfile(fields: Partial<Pick<Profile, "full_name" | "plan_interest">>): Promise<void> {

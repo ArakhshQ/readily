@@ -45,10 +45,29 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+const siteLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE.name,
+    url: `${SITE.url}/`,
+    logo: `${SITE.url}/icon-512.png`,
+    ...(SITE.contactEmail ? { email: SITE.contactEmail } : {}),
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE.name,
+    url: `${SITE.url}/`,
+    description: SITE.description,
+  },
+];
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(siteLd) }} />
         <AuthProvider>
           <SiteHeader />
           <main id="main">{children}</main>

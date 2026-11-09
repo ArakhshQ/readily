@@ -46,10 +46,13 @@ export function SiteFooter() {
               <li>
                 <Link href="/terms/">Terms</Link>
               </li>
+              <li>
+                <Link href="/refunds/">Refunds</Link>
+              </li>
             </ul>
           </div>
         </div>
-        <div className="footer-base">© {new Date().getFullYear()} Readily. Your files stay on your device.</div>
+        <div className="footer-base">© {new Date().getFullYear()} Readily. Everyday tools run on your device; AI tools delete your files within 24 hours.</div>
       </div>
     </footer>
   );

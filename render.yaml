@@ -18,6 +18,12 @@ services:
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
         sync: false
+      # Set to "true" once Stripe is connected (docs/LAUNCH.md). Until then paid plans collect a waitlist.
+      - key: NEXT_PUBLIC_PAYMENTS_ENABLED
+        sync: false
+      # Optional: shown on the contact, privacy and terms pages.
+      - key: NEXT_PUBLIC_CONTACT_EMAIL
+        sync: false
     headers:
       - path: /*
         name: X-Content-Type-Options
@@ -27,7 +33,7 @@ services:
         value: strict-origin-when-cross-origin
       - path: /*
         name: Permissions-Policy
-        value: camera=(), microphone=(), geolocation=()
+        value: camera=(), microphone=(), geolocation=(), payment=(self)
       - path: /*
         name: X-Frame-Options
         value: SAMEORIGIN
@@ -37,3 +43,9 @@ services:
       - path: /sw.js
         name: Cache-Control
         value: no-cache
+      - path: /vendor/*
+        name: Cache-Control
+        value: public, max-age=2592000
+      - path: /workers/*
+        name: Cache-Control
+        value: public, max-age=86400

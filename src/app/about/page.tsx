@@ -23,7 +23,7 @@ export default function About() {
 
       <h2>What we believe</h2>
       <ul>
-        <li>Your files should stay on your device. Every Readily tool runs in your browser, so nothing is uploaded.</li>
+        <li>Your files should stay on your device. Every everyday tool runs in your browser, so nothing is uploaded. The few AI tools that need a server say so first, and delete your file within 24 hours.</li>
         <li>You should be able to say what you need, like &ldquo;under 500 KB,&rdquo; and get exactly that.</li>
         <li>Everyday tools should be free, fast and free of tricks. No watermarks, no forced signups.</li>
         <li>A result should be checked before you use it. Every Readily result shows its final size, dimensions and page count.</li>

@@ -294,6 +294,141 @@ const glyphs: Record<ToolSlug, (p: P) => React.ReactElement> = {
       <path d="M15 4v16M15 4h5M15 20h5" strokeDasharray="0" />
     </Svg>
   ),
+  "noise-remover": (p) => (
+    <Svg {...p}>
+      <path d="M3 12h2M7 8v8M11 5v14M15 9v6" /><path d="M18 8l4 8M22 8l-4 8" />
+    </Svg>
+  ),
+  "remove-background": (p) => (
+    <Svg {...p}>
+      <rect x="3" y="3" width="18" height="18" rx="2" strokeDasharray="3 3" /><circle cx="12" cy="9" r="3" /><path d="M6 20c1-4 3.5-6 6-6s5 2 6 6" />
+    </Svg>
+  ),
+  "upscale-image": (p) => (
+    <Svg {...p}>
+      <rect x="3" y="11" width="10" height="10" rx="1.5" /><path d="M14 3h7v7M21 3l-8 8" />
+    </Svg>
+  ),
+  "object-eraser": (p) => (
+    <Svg {...p}>
+      <path d="M7 21l-4-4 10-10 6 6-8 8z" /><path d="M11 21h10" /><path d="M9 11l6 6" />
+    </Svg>
+  ),
+  "searchable-pdf": (p) => (
+    <Svg {...p}>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4" /><path d="M14 3v5h5v3" /><circle cx="17" cy="17" r="3" /><path d="M21 21l-1.8-1.8" />
+    </Svg>
+  ),
+  "protect-pdf": (p) => (
+    <Svg {...p}>
+      <rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /><path d="M12 15v2" />
+    </Svg>
+  ),
+  "unlock-pdf": (p) => (
+    <Svg {...p}>
+      <rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 7.5-2" /><path d="M12 15v2" />
+    </Svg>
+  ),
+  "remove-silence": (p) => (
+    <Svg {...p}>
+      <path d="M3 12h2M6 9v6M9 7v10" /><path d="M12 12h3" strokeDasharray="1 2" /><path d="M18 7v10M21 10v4" />
+    </Svg>
+  ),
+  "pdf-to-word": (p) => (
+    <Svg {...p}>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /><path d="M8 12l1.5 5 2.5-4 2.5 4L16 12" />
+    </Svg>
+  ),
+  "summarize-pdf": (p) => (
+    <Svg {...p}>
+      <path d="M4 6h16M4 10h16M4 14h10M4 18h6" /><path d="M17 15l2 2 3-4" />
+    </Svg>
+  ),
+  "chat-with-pdf": (p) => (
+    <Svg {...p}>
+      <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.7A8 8 0 1 1 21 12z" /><path d="M9.5 9.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-.9.8-.9 1.4M12 16h.01" />
+    </Svg>
+  ),
+  "transcribe": (p) => (
+    <Svg {...p}>
+      <rect x="9" y="2" width="6" height="11" rx="3" /><path d="M5 10a7 7 0 0 0 14 0M12 17v4" /><path d="M16 21h5M18 18h3" />
+    </Svg>
+  ),
+  "studio-voice": (p) => (
+    <Svg {...p}>
+      <rect x="9" y="2" width="6" height="11" rx="3" /><path d="M5 10a7 7 0 0 0 14 0M12 17v4M8 21h8" /><path d="M20 3l.7 1.5L22 5l-1.3.5L20 7l-.7-1.5L18 5l1.3-.5z" />
+    </Svg>
+  ),
+  "auto-subtitles": (p) => (
+    <Svg {...p}>
+      <rect x="2" y="4" width="20" height="16" rx="2" /><path d="M6 14h4M12 14h6M6 17h8" />
+    </Svg>
+  ),
+  "translate-document": (p) => (
+    <Svg {...p}>
+      <path d="M4 5h8M8 3v2M6 5c0 4 3 7 6 8M10 5c-1 4-3 7-6 8" /><path d="M13 21l4-9 4 9M14.5 18h5" />
+    </Svg>
+  ),
+  "hd-photo-upscaler": (p) => (
+    <Svg {...p}>
+      <rect x="3" y="5" width="18" height="14" rx="2" /><path d="M7 9v6M11 9v6M7 12h4M14 9v6h1.5a3 3 0 0 0 0-6z" />
+    </Svg>
+  ),
+  "restore-photo": (p) => (
+    <Svg {...p}>
+      <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="12" cy="10" r="3" /><path d="M7 19c1-3 3-4 5-4s4 1 5 4" /><path d="M17 3l4 4" />
+    </Svg>
+  ),
+  "colorize-photo": (p) => (
+    <Svg {...p}>
+      <circle cx="12" cy="12" r="9" /><circle cx="8.5" cy="9.5" r="1.2" /><circle cx="12" cy="7.5" r="1.2" /><circle cx="15.5" cy="9.5" r="1.2" /><path d="M12 21a3 3 0 0 1 0-6h2" />
+    </Svg>
+  ),
+  "assistant": (p) => (
+    <Svg {...p}>
+      <path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z" /><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" />
+    </Svg>
+  ),
+  "ai-voiceover": (p) => (
+    <Svg {...p}>
+      <path d="M4 9v6h4l5 4V5L8 9z" /><path d="M17 8a5 5 0 0 1 0 8M20 5a9 9 0 0 1 0 14" />
+    </Svg>
+  ),
+  "voice-changer": (p) => (
+    <Svg {...p}>
+      <path d="M3 12h2M7 8v8M11 5v14" /><path d="M14 9h7M18 6l3 3-3 3M21 15h-7M17 12l-3 3 3 3" />
+    </Svg>
+  ),
+  "ai-dubbing": (p) => (
+    <Svg {...p}>
+      <rect x="2" y="5" width="13" height="14" rx="2" /><path d="M15 10l5-3v10l-5-3" /><path d="M5 9h4M7 8v1M6 9c0 2 1 3 3 4" />
+    </Svg>
+  ),
+  "video-background-remover": (p) => (
+    <Svg {...p}>
+      <rect x="2" y="5" width="14" height="14" rx="2" strokeDasharray="3 3" /><path d="M16 10l6-3v10l-6-3" /><circle cx="9" cy="10" r="2" /><path d="M5.5 17c.7-2 2-3 3.5-3s2.8 1 3.5 3" />
+    </Svg>
+  ),
+  "video-upscaler": (p) => (
+    <Svg {...p}>
+      <rect x="2" y="7" width="12" height="12" rx="2" /><path d="M14 11l4-2v8l-4-2" /><path d="M16 3h5v5M21 3l-4 4" />
+    </Svg>
+  ),
+  "photo-to-video": (p) => (
+    <Svg {...p}>
+      <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M10 8.5v7l6-3.5z" />
+    </Svg>
+  ),
+  "ai-photo-editor": (p) => (
+    <Svg {...p}>
+      <rect x="3" y="7" width="14" height="14" rx="2" /><path d="M3 17l4-4 3 3 2-2 5 5" /><path d="M18 2l.9 2.1L21 5l-2.1.9L18 8l-.9-2.1L15 5l2.1-.9z" />
+    </Svg>
+  ),
+  "product-photo-backgrounds": (p) => (
+    <Svg {...p}>
+      <path d="M21 8l-9-5-9 5 9 5z" /><path d="M3 8v8l9 5 9-5V8M12 13v8" />
+    </Svg>
+  ),
 };
 
 export function ToolGlyph({ slug, size = 22 }: { slug: ToolSlug; size?: number }) {

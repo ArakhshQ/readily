@@ -14,17 +14,20 @@ import {
   deleteFile,
   downloadUrl,
   getProfile,
+  listAiJobs,
   listFiles,
   listHistory,
   storageLimit,
   storageUsed,
   updateProfile,
+  type AiJob,
   type HistoryItem,
   type Profile,
   type SavedFile,
 } from "@/lib/account";
 import { formatBytes } from "@/lib/files";
-import { PAID_PLANS, PLAN_BY_ID, type PaidPlanId } from "@/lib/plans";
+import { PAID_PLANS, PLAN_BY_ID, toPaidPlanId, type PaidPlanId } from "@/lib/plans";
+import { openPortal, paymentsEnabled, startCheckout } from "@/lib/billing";
 import { friendlyAuthError, getSupabase } from "@/lib/supabase";
 import { TOOL_BY_SLUG, type ToolSlug } from "@/lib/tools";
 
@@ -44,11 +47,14 @@ export function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [files, setFiles] = useState<SavedFile[] | null>(null);
   const [history, setHistory] = useState<HistoryItem[] | null>(null);
+  const [jobs, setJobs] = useState<AiJob[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(
     params.get("welcome") ? "Your account is ready. Results you make are now added to your history, and you can save any of them here." : params.get("password") ? "Your password was changed." : null,
   );
 
+  const checkoutPlan = toPaidPlanId(params.get("checkout"));
+  const checkoutInterval = params.get("interval") === "year" ? "year" : "month";
   const leaving = useRef(false);
   useEffect(() => {
     if (!loading && enabled && !session && !leaving.current) router.replace("/login/?next=/dashboard/");
@@ -59,9 +65,10 @@ export function Dashboard() {
       const p = await getProfile();
       setProfile(p);
       const plan = p?.plan ?? "free";
-      const [f, h] = await Promise.all([listFiles(), listHistory(PLAN_BY_ID[plan].historyDays)]);
+      const [f, h, j] = await Promise.all([listFiles(), listHistory(PLAN_BY_ID[plan].historyDays), listAiJobs().catch(() => [])]);
       setFiles(f);
       setHistory(h);
+      setJobs(j);
     } catch (e) {
       setError(friendlyAuthError(e));
     }
@@ -112,11 +119,37 @@ export function Dashboard() {
         </div>
       )}
       {error && <Message kind="error">{error}</Message>}
+      {paymentsEnabled && checkoutPlan && profile?.plan === "free" && (
+        <div className="dash-notice dash-checkout" role="status">
+          <p>
+            You picked <strong>{PLAN_BY_ID[checkoutPlan].name}</strong> ({checkoutInterval === "year" ? `${PLAN_BY_ID[checkoutPlan].yearly} a year` : `${PLAN_BY_ID[checkoutPlan].price} a month`}).
+          </p>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => startCheckout(checkoutPlan, checkoutInterval).catch((e) => setError(e instanceof Error ? e.message : "Checkout couldn't open."))}
+          >
+            Continue to checkout
+          </button>
+        </div>
+      )}
 
       <div className="dash-stats">
         <div className="stat">
-          <span>Saved files</span>
-          <strong>{files ? files.length : "…"}</strong>
+          <span>AI credits</span>
+          <strong>
+            {profile ? profile.credits.toLocaleString("en-US") : "…"}
+            {profile && plan.id !== "free" && <small> of {plan.credits.toLocaleString("en-US")}</small>}
+          </strong>
+          {profile && (
+            <small className="stat-note">
+              {plan.id === "free"
+                ? "One-time trial credits"
+                : profile.credits_refresh_at
+                  ? `Refresh ${new Date(profile.credits_refresh_at).toLocaleDateString([], { month: "short", day: "numeric" })}`
+                  : "Refresh monthly"}
+            </small>
+          )}
         </div>
         <div className="stat">
           <span>Storage</span>
@@ -231,6 +264,7 @@ export function Dashboard() {
       </div>
 
       <PlanCard profile={profile} onChange={setProfile} />
+      {jobs && jobs.length > 0 && <AiJobs jobs={jobs} />}
       <Settings
         profile={profile}
         email={session.user.email ?? ""}
@@ -250,35 +284,86 @@ function PlanCard({ profile, onChange }: { profile: Profile | null; onChange: (p
   const [err, setErr] = useState<string | null>(null);
   if (!profile) return null;
   const current = PLAN_BY_ID[profile.plan];
-  async function join(id: PaidPlanId) {
-    if (!profile) return;
+  const paid = profile.plan !== "free";
+  const date = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" }) : "");
+
+  async function act(fn: () => Promise<void>) {
     setBusy(true);
     setErr(null);
     try {
-      await updateProfile({ plan_interest: id });
-      onChange({ ...profile, plan_interest: id });
+      await fn();
     } catch (e) {
-      setErr(friendlyAuthError(e));
-    } finally {
+      setErr(e instanceof Error ? e.message : "Something went wrong. Try again.");
       setBusy(false);
     }
   }
+  async function join(id: PaidPlanId) {
+    if (!profile) return;
+    await act(async () => {
+      await updateProfile({ plan_interest: id });
+      onChange({ ...profile, plan_interest: id });
+      setBusy(false);
+    });
+  }
+
   return (
     <section className="dash-card dash-plan" aria-labelledby="plan-h">
       <div>
-        <h2 id="plan-h">Your plan: {current.name}</h2>
-        {profile.plan === "free" && (
+        <h2 id="plan-h">
+          Your plan: {current.name}
+          {paid && profile.billing_interval && <small> · billed {profile.billing_interval === "year" ? "yearly" : "monthly"}</small>}
+        </h2>
+        {paid && (
           <p>
-            {profile.plan_interest
-              ? `You're on the ${PLAN_BY_ID[profile.plan_interest].name} waitlist. We'll email you when it opens.`
-              : "Want the pro-quality tools and AI? Join a waitlist and we'll email you when paid plans open."}
+            {profile.cancel_at_period_end
+              ? `Ends on ${date(profile.current_period_end)}. You keep everything until then.`
+              : profile.subscription_status === "past_due"
+                ? "Your last payment didn't go through. Update your card to keep your plan."
+                : profile.current_period_end
+                  ? `Renews on ${date(profile.current_period_end)}. ${current.credits.toLocaleString("en-US")} AI credits every month.`
+                  : `${current.credits.toLocaleString("en-US")} AI credits every month.`}
+          </p>
+        )}
+        {!paid && (
+          <p>
+            {paymentsEnabled
+              ? profile.plan_interest
+                ? `You picked ${PLAN_BY_ID[profile.plan_interest].name}. Continue to checkout whenever you're ready.`
+                : "Get pro-quality voice, photo, video and document tools with a plan."
+              : profile.plan_interest
+                ? `You're on the ${PLAN_BY_ID[profile.plan_interest].name} waitlist. We'll email you when it opens.`
+                : "Want the pro-quality tools and AI? Join a waitlist and we'll email you when paid plans open."}
           </p>
         )}
         {err && <Message kind="error">{err}</Message>}
       </div>
-      {profile.plan === "free" && (
-        <div className="plan-actions">
-          {PAID_PLANS.map(({ id }) =>
+      <div className="plan-actions">
+        {paid && paymentsEnabled && (
+          <>
+            <button type="button" className="btn btn-primary" disabled={busy} onClick={() => act(openPortal)}>
+              Manage billing
+            </button>
+            <Link href="/pricing/" className="btn btn-quiet">
+              Change plan
+            </Link>
+          </>
+        )}
+        {!paid &&
+          paymentsEnabled &&
+          PAID_PLANS.map(({ id }) => (
+            <button
+              key={id}
+              type="button"
+              className={`btn ${(profile.plan_interest ?? "pro") === id ? "btn-primary" : "btn-secondary"}`}
+              disabled={busy}
+              onClick={() => act(() => startCheckout(id, "month"))}
+            >
+              {profile.plan_interest === id ? `Continue to ${PLAN_BY_ID[id].name}` : `Get ${PLAN_BY_ID[id].name} (${PLAN_BY_ID[id].price}/mo)`}
+            </button>
+          ))}
+        {!paid &&
+          !paymentsEnabled &&
+          PAID_PLANS.map(({ id }) =>
             profile.plan_interest === id ? (
               <span key={id} className="status-pill">
                 <Check size={16} strokeWidth={3} />
@@ -290,11 +375,61 @@ function PlanCard({ profile, onChange }: { profile: Profile | null; onChange: (p
               </button>
             ),
           )}
+        {!paid && (
           <Link href="/pricing/" className="btn btn-quiet">
             Compare plans
           </Link>
-        </div>
-      )}
+        )}
+      </div>
+    </section>
+  );
+}
+
+function AiJobs({ jobs }: { jobs: AiJob[] }) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const fresh = (j: AiJob) => j.status === "succeeded" && j.output_path && Date.now() - new Date(j.created_at).getTime() < 24 * 3600_000;
+  async function download(j: AiJob) {
+    setBusy(j.id);
+    setErr(null);
+    try {
+      const { jobResult } = await import("@/lib/ai-client");
+      const res = await jobResult(j.id);
+      const f = res.files?.[0];
+      if (!f) throw new Error("This result has expired.");
+      window.location.href = f.url;
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "The result couldn't be downloaded.");
+    } finally {
+      setBusy(null);
+    }
+  }
+  return (
+    <section className="dash-card" aria-labelledby="ai-h">
+      <h2 id="ai-h">Recent AI results</h2>
+      <p className="hint">AI results stay ready to download for 24 hours. Save the ones you want to keep.</p>
+      {err && <Message kind="error">{err}</Message>}
+      <ul className="dash-list">
+        {jobs.map((j) => {
+          const t = TOOL_BY_SLUG[j.tool as ToolSlug];
+          return (
+            <li key={j.id}>
+              <span className="dash-icon">{t ? <ToolGlyph slug={t.slug} size={18} /> : <FileIcon size={18} />}</span>
+              <span className="dash-meta">
+                <strong>{t?.name ?? j.tool}</strong>
+                <span>
+                  {when(j.created_at)} · {j.status === "failed" ? "Didn't finish, credits refunded" : j.status === "running" ? "Still working" : `${j.credits} ${j.credits === 1 ? "credit" : "credits"}`}
+                </span>
+              </span>
+              {fresh(j) && (
+                <button type="button" className="icon-btn" disabled={busy === j.id} onClick={() => download(j)} aria-label={`Download ${t?.name ?? "result"}`}>
+                  <Download size={18} />
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

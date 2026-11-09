@@ -1,5 +1,6 @@
 // The catalog of Readily tools. Every page, menu, search result and sitemap
 // entry is generated from this list, so adding a tool starts here.
+import { PRO_TOOLS } from "./tools-pro";
 
 export type ToolSlug =
   | "jpg-to-pdf"
@@ -21,12 +22,43 @@ export type ToolSlug =
   | "compress-video"
   | "video-to-mp3"
   | "convert-audio"
-  | "trim-audio";
+  | "trim-audio"
+  // Paid tools (tools-pro.ts)
+  | "noise-remover"
+  | "remove-background"
+  | "upscale-image"
+  | "object-eraser"
+  | "searchable-pdf"
+  | "protect-pdf"
+  | "unlock-pdf"
+  | "remove-silence"
+  | "pdf-to-word"
+  | "summarize-pdf"
+  | "chat-with-pdf"
+  | "transcribe"
+  | "studio-voice"
+  | "auto-subtitles"
+  | "translate-document"
+  | "hd-photo-upscaler"
+  | "restore-photo"
+  | "colorize-photo"
+  | "assistant"
+  | "ai-voiceover"
+  | "voice-changer"
+  | "ai-dubbing"
+  | "video-background-remover"
+  | "video-upscaler"
+  | "photo-to-video"
+  | "ai-photo-editor"
+  | "product-photo-backgrounds";
 
 export type Category = "pdf" | "image" | "video" | "audio";
 
 /** What kind of file a tool takes in. */
-export type InputKind = "image" | "pdf" | "image-pdf" | "heic" | "video" | "audio" | "media";
+export type InputKind = "image" | "pdf" | "image-pdf" | "heic" | "video" | "audio" | "media" | "text" | "any";
+
+/** 0 = free for everyone; 1 Basic; 2 Pro; 3 Premium. */
+export type ToolLevel = 0 | 1 | 2 | 3;
 
 export interface Faq {
   q: string;
@@ -57,11 +89,22 @@ export interface Tool {
   multiple: boolean;
   related: ToolSlug[];
   faq: Faq[];
+  /** Plan level that unlocks the tool (default 0, free). */
+  level?: ToolLevel;
+  /** Where the work happens. Server tools use credits. */
+  engine?: "device" | "server";
+  /** Credits per unit for server tools. */
+  credits?: number;
+  unit?: string;
+  /** Capped per month instead of charged credits. */
+  capped?: boolean;
+  /** A higher-quality mode only on Premium. */
+  premiumOption?: { name: string; credits: number; what: string };
 }
 
 const IMAGE_ACCEPT = "image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.gif,.bmp,.avif,.heic,.heif";
 
-export const TOOLS: Tool[] = [
+const FREE_TOOLS: Tool[] = [
   {
     slug: "jpg-to-pdf",
     name: "Images to PDF",
@@ -726,9 +769,15 @@ export const TOOLS: Tool[] = [
   },
 ];
 
+export const TOOLS: Tool[] = [...FREE_TOOLS, ...PRO_TOOLS];
+
 export const TOOL_BY_SLUG: Record<ToolSlug, Tool> = Object.fromEntries(
   TOOLS.map((t) => [t.slug, t]),
 ) as Record<ToolSlug, Tool>;
+
+export function toolLevel(t: Tool): ToolLevel {
+  return t.level ?? 0;
+}
 
 export const CATEGORIES: { id: Category; name: string; blurb: string; path: string }[] = [
   { id: "pdf", name: "PDF tools", blurb: "Build, combine, edit and sign PDFs.", path: "/pdf-tools/" },

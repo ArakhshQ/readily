@@ -6,11 +6,11 @@ export const dynamic = "force-static";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
-  const pages = ["", "tools/", "pdf-tools/", "image-tools/", "video-tools/", "audio-tools/", "pricing/", "signup/", "about/", "privacy/", "terms/"].map((p) => ({
+  const pages = ["", "tools/", "pdf-tools/", "image-tools/", "video-tools/", "audio-tools/", "ai-tools/", "pricing/", "signup/", "about/", "privacy/", "terms/", "refunds/"].map((p) => ({
     url: `${SITE.url}/${p}`,
     lastModified: now,
     priority: p === "" ? 1 : 0.4,
   }));
-  const tools = TOOLS.map((t) => ({ url: `${SITE.url}/${t.slug}/`, lastModified: now, priority: 0.9 }));
+  const tools = TOOLS.map((t) => ({ url: `${SITE.url}/${t.slug}/`, lastModified: now, priority: t.level ? 0.8 : 0.9 }));
   return [...pages.slice(0, 1), ...tools, ...pages.slice(1)];
 }

@@ -14,6 +14,8 @@ const CHECK: Record<InputKind, { test: (f: File) => boolean; label: string }> = 
   video: { test: isVideo, label: "a video" },
   audio: { test: isAudio, label: "an audio file" },
   media: { test: (f) => isVideo(f) || isAudio(f), label: "a video or audio file" },
+  text: { test: (f) => f.type.startsWith("text/") || /\.txt$/i.test(f.name), label: "a text file" },
+  any: { test: (f) => isImage(f) || isPdf(f) || isHeic(f), label: "an image or PDF" },
 };
 
 let counter = 0;

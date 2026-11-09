@@ -2,9 +2,12 @@
 
 Free file tools that run entirely in the browser. Files are never uploaded.
 
-**20 tools:** PDF (images to PDF, merge, split, compress, PDF to JPG, organize, page numbers, watermark, sign), images (compress to a target size, resize, convert, crop, HEIC to JPG, image to text), video (trim, compress, video to MP3) and audio (convert, trim).
+**47 tools.** 20 free everyday tools (PDF, image, video, audio) that run in the browser, plus 27 paid tools:
+9 on-device Basic tools (noise remover, background remover, upscaler, object eraser, searchable PDF, protect/unlock PDF, remove silences, PDF to Word) and 18 AI tools on Readily's server (summaries, Ask a PDF, transcription, subtitles, translation, studio voice, photo restore/colorize/upscale, voiceover, voice changer, dubbing, video background removal and upscaling, photo to video, AI photo editing, product backgrounds, and a plain-words assistant).
 
 **Plans:** Free, Basic, Pro and Premium. Paid plans add higher-quality tools and AI paid for with monthly credits (waitlist until payments are connected).
+
+**Launch:** see [docs/LAUNCH.md](docs/LAUNCH.md) for the AI keys, Stripe and domain.
 
 **Accounts (optional):** sign up, log in, email verification, a dashboard with history and saved files, and plans. Powered by Supabase with emails sent through Brevo. Setup: [docs/ACCOUNTS-SETUP.md](docs/ACCOUNTS-SETUP.md).
 
@@ -37,7 +40,11 @@ npm run build      # writes the static site to out/
 ```
 src/app/            pages (home, tool pages, all tools, about, privacy, terms)
 src/components/     UI, shared tool workspace, and one file per tool in tools/
-src/lib/tools.ts    tool catalog: names, SEO copy, FAQs, related tools
+src/lib/tools.ts    free tool catalog: names, SEO copy, FAQs, related tools
+src/lib/tools-pro.ts paid tools: plan level, engine, credits
+src/lib/plans.ts    plans, credits, allowances
+supabase/schema.sql database, credits, security rules
+supabase/functions/ AI server (ai), Stripe (billing, stripe-webhook), tests
 src/lib/pdf-ops.ts  images to PDF, merge, split
 src/lib/image-ops.ts compress to target size, resize, convert
 public/             icons, manifest, service worker
@@ -49,4 +56,6 @@ scripts/            icon generator
 1. Add an entry to `TOOLS` in `src/lib/tools.ts`.
 2. Create its component in `src/components/tools/`.
 3. Register it in `src/components/ToolRunner.tsx` and add its glyph in `src/components/Icons.tsx`.
-4. Add the page to `PAGES` in `public/sw.js` and bump `VERSION`.
+4. Bump `VERSION` in `public/sw.js`.
+5. Paid AI tool: also add it to `SERVER_TOOLS` in `supabase/functions/_shared/tools.ts` and a case in `supabase/functions/ai/index.ts`.
+6. Run `python3 scripts/make-og.py` to make its share image.

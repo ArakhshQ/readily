@@ -16,6 +16,12 @@ export function SignupForm() {
   const params = useSearchParams();
   const planParam = params.get("plan");
   const plan = toPaidPlanId(planParam);
+  const interval = params.get("interval") === "year" ? "year" : "month";
+  // Where to land after confirming the email: the tool they came from, or the dashboard.
+  const nextParam = params.get("next");
+  const nextPath = nextParam && /^\/[a-z0-9-]+\/$/.test(nextParam) ? nextParam : null;
+  const landing = () =>
+    `${window.location.origin}${nextPath ?? "/dashboard/"}?welcome=1${plan ? `&checkout=${plan}&interval=${interval}` : ""}`;
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -45,7 +51,7 @@ export function SignupForm() {
         email: email.trim(),
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard/?welcome=1`,
+          emailRedirectTo: landing(),
           data: { full_name: name.trim() || null, plan_interest: plan },
         },
       });
@@ -67,7 +73,7 @@ export function SignupForm() {
     if (!sentTo) return;
     try {
       const sb = await getSupabase();
-      const { error } = await sb.auth.resend({ type: "signup", email: sentTo, options: { emailRedirectTo: `${window.location.origin}/dashboard/?welcome=1` } });
+      const { error } = await sb.auth.resend({ type: "signup", email: sentTo, options: { emailRedirectTo: landing() } });
       if (error) throw error;
       setResent(true);
     } catch (x) {

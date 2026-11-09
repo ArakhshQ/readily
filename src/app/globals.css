@@ -2567,3 +2567,337 @@ body.menu-open {
   color: var(--teal);
   font-weight: 700;
 }
+
+/* ------------------------------------------------------------ paid tools */
+
+.access {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--white);
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.access a {
+  font-weight: 600;
+}
+.access-line {
+  flex: 1 1 280px;
+}
+.access-cost {
+  font-size: 14px;
+  color: var(--muted);
+}
+.access-blocked {
+  flex-basis: 100%;
+}
+.plan-chip {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--cobalt-wash);
+  color: var(--cobalt);
+}
+.plan-chip-pro {
+  background: var(--cobalt);
+  color: var(--white);
+}
+.plan-chip-premium {
+  background: var(--ink);
+  color: #ffd98a;
+}
+.tag-plan {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 7px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: 2px;
+  background: var(--cobalt-wash);
+  color: var(--cobalt);
+}
+.tag-plan-pro {
+  background: var(--cobalt);
+  color: var(--white);
+}
+.tag-plan-premium {
+  background: var(--ink);
+  color: #ffd98a;
+}
+.field-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 640px) {
+  .field-pair {
+    grid-template-columns: 1fr;
+  }
+}
+.hint-error {
+  color: var(--danger);
+}
+.check {
+  align-items: flex-start;
+  line-height: 1.4;
+}
+.check input {
+  flex: none;
+  margin-top: 1px;
+}
+textarea.input {
+  min-height: 0;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  resize: vertical;
+  line-height: 1.5;
+  width: 100%;
+}
+select.input {
+  width: 100%;
+}
+.input-color {
+  width: 64px;
+  height: 40px;
+  padding: 2px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-s);
+  background: var(--white);
+}
+.chip-on {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--white);
+}
+.voice-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.voice-row select {
+  flex: 1;
+  min-width: 0;
+}
+.plan-steps {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--teal-wash);
+  color: var(--ink);
+}
+.plan-steps ol {
+  margin: 8px 0 0;
+  padding-left: 22px;
+  display: grid;
+  gap: 4px;
+}
+
+/* Object eraser */
+.eraser {
+  display: grid;
+  gap: 12px;
+}
+.eraser-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+.eraser-tools input[type="range"] {
+  width: 160px;
+  accent-color: var(--cobalt);
+}
+.eraser-stage {
+  position: relative;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: repeating-conic-gradient(#eef1f7 0% 25%, #fff 0% 50%) 0 0 / 20px 20px;
+  line-height: 0;
+}
+.eraser-img,
+.eraser-paint {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.eraser-paint {
+  position: absolute;
+  inset: 0;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* Ask a PDF */
+.chat {
+  display: grid;
+  gap: 14px;
+}
+.chat-file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+}
+.chat-file span {
+  color: var(--muted);
+  font-size: 14px;
+  flex: 1;
+}
+.chat-thread {
+  display: grid;
+  gap: 14px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding: 4px;
+}
+.chat-turn {
+  display: grid;
+  gap: 8px;
+}
+.chat-q {
+  justify-self: end;
+  max-width: 85%;
+  background: var(--cobalt);
+  color: var(--white);
+  padding: 10px 14px;
+  border-radius: 14px 14px 4px 14px;
+}
+.chat-a {
+  max-width: 92%;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  padding: 12px 14px;
+  border-radius: 14px 14px 14px 4px;
+  white-space: pre-wrap;
+  line-height: 1.55;
+  unicode-bidi: plaintext;
+}
+.chat-wait {
+  color: var(--muted);
+}
+.chat-ask {
+  display: flex;
+  gap: 10px;
+}
+.chat-ask .input {
+  flex: 1;
+  min-width: 0;
+}
+.server-badge {
+  color: var(--cobalt);
+}
+.stat-note {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.dash-plan h2 small {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.interval-switch {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 24px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: var(--white);
+}
+.interval-switch button {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink-2);
+  padding: 8px 18px;
+  border-radius: 99px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.interval-switch button.on {
+  background: var(--ink);
+  color: var(--white);
+}
+.interval-switch .save {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 99px;
+  background: var(--teal-wash);
+  color: var(--teal);
+}
+.dash-checkout {
+  align-items: center;
+  border-color: var(--cobalt-line);
+  background: var(--cobalt-wash);
+}
+.billing-welcome {
+  max-width: 640px;
+  padding-top: clamp(40px, 6vw, 72px);
+  display: grid;
+  gap: 16px;
+}
+.billing-welcome .tool-rows {
+  margin-top: 8px;
+}
+.muted-inline {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--muted);
+  margin-left: 6px;
+}
+.tool-rows-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 24px;
+}
+@media (max-width: 760px) {
+  .tool-rows-2 {
+    grid-template-columns: 1fr;
+  }
+}
+.ai-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+@media (max-width: 900px) {
+  .ai-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.ai-card {
+  display: grid;
+  gap: 6px;
+  height: 100%;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  background: var(--white);
+  color: var(--ink-2);
+  text-decoration: none;
+  font-size: 15px;
+}
+.ai-card:hover {
+  border-color: var(--cobalt);
+}
+.ai-card strong {
+  color: var(--ink);
+  font-size: 17px;
+}

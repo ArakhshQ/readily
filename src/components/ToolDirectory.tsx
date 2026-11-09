@@ -1,5 +1,6 @@
 "use client";
 
+import { PlanTag } from "./PlanTag";
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight, Search, ToolGlyph } from "./Icons";
@@ -55,6 +56,7 @@ export function ToolDirectory({ heading, intro, headingLevel = 2, only }: Props)
                         <strong>
                           {t.name}
                           {t.isNew && <span className="tag-new">New</span>}
+                          <PlanTag tool={t} />
                         </strong>
                         <span>{t.short}</span>
                       </span>

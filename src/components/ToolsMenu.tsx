@@ -2,6 +2,7 @@
 
 // Header "Tools" menu: every tool by category with instant search.
 // Opens with the button, or Ctrl/Cmd + K from anywhere.
+import { PlanTag } from "./PlanTag";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -104,6 +105,7 @@ export function ToolsMenu() {
                               <strong>
                                 {t.name}
                                 {t.isNew && <span className="tag-new">New</span>}
+                          <PlanTag tool={t} />
                               </strong>
                               <span>{t.short}</span>
                             </span>

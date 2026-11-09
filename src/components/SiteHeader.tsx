@@ -21,6 +21,7 @@ export function SiteHeader() {
             <Link href="/image-tools/">Image</Link>
             <Link href="/video-tools/">Video</Link>
             <Link href="/audio-tools/">Audio</Link>
+            <Link href="/ai-tools/">AI tools</Link>
             <Link href="/pricing/">Pricing</Link>
           </span>
           <AccountNav />
