@@ -8,7 +8,10 @@
 
 const KEY = process.env.STRIPE_SECRET_KEY;
 const API = process.env.STRIPE_API_BASE ?? "https://api.stripe.com/v1";
-const [supabaseUrl, siteUrl] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const envFileAt = args.indexOf("--save-to");
+const envFile = envFileAt >= 0 ? args[envFileAt + 1] : null;
+const [supabaseUrl, siteUrl] = args.filter((_, i) => envFileAt < 0 || (i !== envFileAt && i !== envFileAt + 1));
 
 if (!KEY || !supabaseUrl || !siteUrl) {
   console.error("Usage: STRIPE_SECRET_KEY=sk_... node scripts/stripe-setup.mjs https://YOUR-PROJECT.supabase.co https://your-site.com");
@@ -131,6 +134,14 @@ const secrets = {
   ...(portalId ? { STRIPE_PORTAL_CONFIGURATION: portalId } : {}),
   SITE_URL: site,
 };
-console.log("\nDone. Now run this in your terminal (from the readily folder):\n");
-console.log(`npx supabase secrets set ${Object.entries(secrets).map(([k, v]) => `${k}=${v}`).join(" ")}\n`);
-if (!secret && !old) console.log("Note: no webhook secret was printed. Find it in Stripe > Developers > Webhooks.");
+if (envFile) {
+  // Used by the GitHub "Set up Stripe" workflow: write the values to a file, print only names.
+  const { writeFileSync } = await import("node:fs");
+  writeFileSync(envFile, Object.entries(secrets).map(([k, v]) => `${k}=${v}`).join("\n") + "\n");
+  console.log(`\nDone. Saving ${Object.keys(secrets).join(", ")} on the AI server.`);
+  if (!secret && old) console.log("The webhook already existed, so its signing secret wasn't changed.");
+} else {
+  console.log("\nDone. Now run this in your terminal (from the readily folder):\n");
+  console.log(`npx supabase secrets set ${Object.entries(secrets).map(([k, v]) => `${k}=${v}`).join(" ")}\n`);
+  if (!secret && !old) console.log("Note: no webhook secret was printed. Find it in Stripe > Developers > Webhooks.");
+}
