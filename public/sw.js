@@ -1,6 +1,6 @@
 // Readily service worker: lets the site install as an app and open offline.
 // It caches Readily's own pages and code only. User files are never stored.
-const VERSION = "readily-v2";
+const VERSION = "readily-v3";
 const PAGES = ["/", "/tools/", "/pdf-tools/", "/image-tools/", "/video-tools/", "/audio-tools/"];
 
 self.addEventListener("install", (event) => {

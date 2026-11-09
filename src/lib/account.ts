@@ -1,7 +1,7 @@
 // Everything a signed-in user's dashboard reads and writes. Row-level security in
 // the database (supabase/schema.sql) ensures each user can only touch their own rows.
 import { getSupabase } from "./supabase";
-import { PLAN_BY_ID, type PlanId } from "./plans";
+import { PLAN_BY_ID, toPaidPlanId, toPlanId, type PaidPlanId, type PlanId } from "./plans";
 
 export const BUCKET = "user-files";
 
@@ -9,7 +9,7 @@ export interface Profile {
   id: string;
   full_name: string | null;
   plan: PlanId;
-  plan_interest: Exclude<PlanId, "free"> | null;
+  plan_interest: PaidPlanId | null;
   created_at: string;
 }
 
@@ -43,7 +43,9 @@ export async function getProfile(): Promise<Profile | null> {
   const id = await userId();
   const { data, error } = await sb.from("profiles").select("*").eq("id", id).maybeSingle();
   if (error) throw error;
-  return data as Profile | null;
+  if (!data) return null;
+  // Older rows may still use plan names from before the four-plan lineup.
+  return { ...(data as Profile), plan: toPlanId(data.plan), plan_interest: toPaidPlanId(data.plan_interest) };
 }
 
 export async function updateProfile(fields: Partial<Pick<Profile, "full_name" | "plan_interest">>): Promise<void> {

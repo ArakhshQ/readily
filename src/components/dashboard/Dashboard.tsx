@@ -24,7 +24,7 @@ import {
   type SavedFile,
 } from "@/lib/account";
 import { formatBytes } from "@/lib/files";
-import { PLAN_BY_ID } from "@/lib/plans";
+import { PAID_PLANS, PLAN_BY_ID, type PaidPlanId } from "@/lib/plans";
 import { friendlyAuthError, getSupabase } from "@/lib/supabase";
 import { TOOL_BY_SLUG, type ToolSlug } from "@/lib/tools";
 
@@ -250,7 +250,7 @@ function PlanCard({ profile, onChange }: { profile: Profile | null; onChange: (p
   const [err, setErr] = useState<string | null>(null);
   if (!profile) return null;
   const current = PLAN_BY_ID[profile.plan];
-  async function join(id: "pro" | "ai-plus") {
+  async function join(id: PaidPlanId) {
     if (!profile) return;
     setBusy(true);
     setErr(null);
@@ -271,21 +271,21 @@ function PlanCard({ profile, onChange }: { profile: Profile | null; onChange: (p
           <p>
             {profile.plan_interest
               ? `You're on the ${PLAN_BY_ID[profile.plan_interest].name} waitlist. We'll email you when it opens.`
-              : "Need more room or the AI assistant? Join a waitlist and we'll email you when paid plans open."}
+              : "Want the pro-quality tools and AI? Join a waitlist and we'll email you when paid plans open."}
           </p>
         )}
         {err && <Message kind="error">{err}</Message>}
       </div>
       {profile.plan === "free" && (
         <div className="plan-actions">
-          {(["pro", "ai-plus"] as const).map((id) =>
+          {PAID_PLANS.map(({ id }) =>
             profile.plan_interest === id ? (
               <span key={id} className="status-pill">
                 <Check size={16} strokeWidth={3} />
                 On the {PLAN_BY_ID[id].name} waitlist
               </span>
             ) : (
-              <button key={id} type="button" className={`btn ${profile.plan_interest ? "btn-secondary" : "btn-primary"}`} disabled={busy} onClick={() => join(id)}>
+              <button key={id} type="button" className={`btn ${!profile.plan_interest && PLAN_BY_ID[id].highlight ? "btn-primary" : "btn-secondary"}`} disabled={busy} onClick={() => join(id)}>
                 {profile.plan_interest ? `Switch to ${PLAN_BY_ID[id].name} waitlist` : `Join ${PLAN_BY_ID[id].name} waitlist (${PLAN_BY_ID[id].price}/mo)`}
               </button>
             ),

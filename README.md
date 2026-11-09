@@ -4,6 +4,8 @@ Free file tools that run entirely in the browser. Files are never uploaded.
 
 **20 tools:** PDF (images to PDF, merge, split, compress, PDF to JPG, organize, page numbers, watermark, sign), images (compress to a target size, resize, convert, crop, HEIC to JPG, image to text), video (trim, compress, video to MP3) and audio (convert, trim).
 
+**Plans:** Free, Basic, Pro and Premium. Paid plans add higher-quality tools and AI paid for with monthly credits (waitlist until payments are connected).
+
 **Accounts (optional):** sign up, log in, email verification, a dashboard with history and saved files, and plans. Powered by Supabase with emails sent through Brevo. Setup: [docs/ACCOUNTS-SETUP.md](docs/ACCOUNTS-SETUP.md).
 
 ## How it works

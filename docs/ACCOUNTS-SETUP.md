@@ -79,9 +79,16 @@ the database rules in `schema.sql` are what keep each user's data private.
 
 ## Plans and payments
 
-Plans live in `src/lib/plans.ts` and the storage allowances in `plan_storage_bytes()`
-in `schema.sql`; keep them in sync. Paid plans currently collect a waitlist
-(`profiles.plan_interest`). To see who's waiting, run in the SQL editor:
+Four plans: Free, Basic ($4.99), Pro ($11.99) and Premium ($29.99). Tools, credits and
+limits live in `src/lib/plans.ts`; the storage allowances in `plan_storage_bytes()` in
+`schema.sql`; keep them in sync.
+
+**After changing plans, run the whole `schema.sql` again** in the SQL editor. It's safe to
+re-run: it updates the allowed plan names and moves anyone from the old "AI Plus" plan
+to Pro.
+
+Paid plans currently collect a waitlist (`profiles.plan_interest`). To see who's waiting,
+run in the SQL editor:
 
 ```sql
 select u.email, p.plan_interest, p.created_at

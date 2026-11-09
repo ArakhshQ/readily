@@ -7,7 +7,7 @@ import { useAuth } from "../AuthProvider";
 import { Message } from "../Message";
 import { AuthShell, NotReady } from "./AuthShell";
 import { PasswordField } from "./PasswordField";
-import { PLAN_BY_ID, type PlanId } from "@/lib/plans";
+import { PLAN_BY_ID, toPaidPlanId } from "@/lib/plans";
 import { friendlyAuthError, getSupabase } from "@/lib/supabase";
 
 export function SignupForm() {
@@ -15,7 +15,7 @@ export function SignupForm() {
   const router = useRouter();
   const params = useSearchParams();
   const planParam = params.get("plan");
-  const plan: PlanId | null = planParam === "pro" || planParam === "ai-plus" ? planParam : null;
+  const plan = toPaidPlanId(planParam);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");

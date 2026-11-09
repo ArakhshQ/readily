@@ -6,10 +6,21 @@
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   full_name text check (char_length(full_name) <= 80),
-  plan text not null default 'free' check (plan in ('free', 'pro', 'ai-plus')),
-  plan_interest text check (plan_interest in ('pro', 'ai-plus')),
+  plan text not null default 'free' check (plan in ('free', 'basic', 'pro', 'premium')),
+  plan_interest text check (plan_interest in ('basic', 'pro', 'premium')),
   created_at timestamptz not null default now()
 );
+
+-- Four-plan lineup (Free, Basic, Pro, Premium). Re-running this file on a database
+-- set up with the earlier "AI Plus" plan moves those rows to Pro.
+alter table public.profiles drop constraint if exists profiles_plan_check;
+alter table public.profiles drop constraint if exists profiles_plan_interest_check;
+update public.profiles set plan = 'pro' where plan = 'ai-plus';
+update public.profiles set plan_interest = 'pro' where plan_interest = 'ai-plus';
+alter table public.profiles add constraint profiles_plan_check
+  check (plan in ('free', 'basic', 'pro', 'premium'));
+alter table public.profiles add constraint profiles_plan_interest_check
+  check (plan_interest in ('basic', 'pro', 'premium'));
 
 alter table public.profiles enable row level security;
 
@@ -38,7 +49,11 @@ begin
   values (
     new.id,
     left(nullif(trim(new.raw_user_meta_data ->> 'full_name'), ''), 80),
-    case when interest in ('pro', 'ai-plus') then interest else null end
+    case
+      when interest = 'ai-plus' then 'pro'
+      when interest in ('basic', 'pro', 'premium') then interest
+      else null
+    end
   )
   on conflict (id) do nothing;
   return new;
@@ -54,8 +69,9 @@ create trigger on_auth_user_created
 create or replace function public.plan_storage_bytes(p text)
 returns bigint language sql immutable as $$
   select case p
-    when 'ai-plus' then 50::bigint * 1024 * 1024 * 1024
+    when 'premium' then 25::bigint * 1024 * 1024 * 1024
     when 'pro' then 10::bigint * 1024 * 1024 * 1024
+    when 'basic' then 2::bigint * 1024 * 1024 * 1024
     else 100::bigint * 1024 * 1024
   end;
 $$;

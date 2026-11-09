@@ -1924,6 +1924,129 @@ body.menu-open {
 .narrow-col {
   max-width: var(--narrow);
 }
+
+/* Four plans */
+.plans-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.plans-4 .plan {
+  padding: 26px 20px;
+}
+.plans-4 .plan-hi {
+  padding: 25px 19px;
+}
+.plans-4 .plan-price strong {
+  font-size: 38px;
+}
+@media (max-width: 1100px) {
+  .plans-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: none;
+  }
+}
+@media (max-width: 640px) {
+  .plans-4 {
+    grid-template-columns: 1fr;
+    max-width: 520px;
+  }
+}
+.plan-yearly {
+  margin-top: -10px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.pricing-soon {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  background: var(--amber-wash);
+  color: var(--amber-ink);
+  font-size: 15px !important;
+  font-weight: 600;
+}
+
+/* Tool-by-plan comparison */
+.compare-intro {
+  margin: 8px 0 20px;
+  color: var(--ink-2);
+  max-width: 720px;
+}
+.compare-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  background: var(--white);
+}
+.compare {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.compare th,
+.compare td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.compare thead th {
+  position: sticky;
+  top: 0;
+  background: var(--ink);
+  color: var(--white);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.compare thead th span {
+  display: block;
+  font-weight: 500;
+  font-size: 13px;
+  opacity: 0.8;
+}
+.compare thead th.col-hi {
+  background: var(--cobalt);
+}
+.compare tbody th {
+  font-weight: 700;
+  color: var(--ink);
+  width: 38%;
+}
+.compare tbody th span {
+  display: block;
+  font-weight: 400;
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.compare tbody th .compare-cost {
+  color: var(--cobalt);
+  font-weight: 600;
+  font-size: 13px;
+}
+.compare td {
+  color: var(--ink-2);
+}
+.compare td.compare-no {
+  color: var(--line-strong);
+}
+.compare tr.compare-group th {
+  background: var(--cobalt-wash);
+  color: var(--ink);
+  font-size: 16px;
+  width: auto;
+}
+.compare tr.compare-group th span {
+  display: inline;
+  margin-left: 8px;
+  font-size: 14px;
+}
+.compare tbody tr:last-child th,
+.compare tbody tr:last-child td {
+  border-bottom: 0;
+}
 .btn-small {
   min-height: 38px;
   padding: 0 14px;
@@ -2258,8 +2381,8 @@ body.menu-open {
   text-overflow: ellipsis;
 }
 .dash-plan {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
+  grid-template-columns: 1fr;
+  align-items: start;
   gap: 16px 24px;
 }
 .dash-plan p {
