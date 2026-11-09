@@ -3,8 +3,20 @@
 // explain that sign-up is opening soon.
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+/** Keeps only https://<project>.supabase.co, even if a longer address was pasted
+ *  (for example the ".../rest/v1/" API URL), which would otherwise break sign-up. */
+function projectUrl(raw: string): string {
+  const s = raw.trim();
+  if (!s) return "";
+  try {
+    return new URL(s).origin;
+  } catch {
+    return s;
+  }
+}
+
+const URL_ = projectUrl(process.env.NEXT_PUBLIC_SUPABASE_URL || "");
+const KEY = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
 
 export const accountsEnabled = Boolean(URL_ && KEY);
 
