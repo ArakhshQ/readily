@@ -29,8 +29,8 @@ jobs:
           version: latest
       - name: Deploy functions
         run: |
-          supabase functions deploy ai --project-ref "$PROJECT_REF"
-          supabase functions deploy billing --project-ref "$PROJECT_REF"
-          supabase functions deploy stripe-webhook --project-ref "$PROJECT_REF" --no-verify-jwt
+          supabase functions deploy ai --project-ref "$PROJECT_REF" --yes
+          supabase functions deploy billing --project-ref "$PROJECT_REF" --yes
+          supabase functions deploy stripe-webhook --project-ref "$PROJECT_REF" --yes --no-verify-jwt
       - name: Tell the server where the website is
-        run: supabase secrets set --project-ref "$PROJECT_REF" SITE_URL="$SITE_URL" ALLOWED_ORIGINS="$SITE_URL"
+        run: supabase secrets set --project-ref "$PROJECT_REF" --yes SITE_URL="$SITE_URL" ALLOWED_ORIGINS="$SITE_URL"

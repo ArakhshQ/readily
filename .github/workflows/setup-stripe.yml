@@ -33,5 +33,5 @@ jobs:
           version: latest
       - name: Save the Stripe keys on the AI server
         run: |
-          supabase secrets set --project-ref "$PROJECT_REF" --env-file stripe.env
+          supabase secrets set --project-ref "$PROJECT_REF" --yes --env-file stripe.env
           rm stripe.env
