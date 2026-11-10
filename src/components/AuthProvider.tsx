@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!accountsEnabled) return;
     const path = window.location.pathname;
-    const accountPage = /^\/(login|signup|dashboard|forgot-password|reset-password|billing)\/?/.test(path) || /access_token=/.test(window.location.hash);
+    const accountPage = /^\/(login|signup|dashboard|forgot-password|reset-password|billing|admin)\/?/.test(path) || /access_token=/.test(window.location.hash);
     // Most visitors never sign in: skip loading Supabase unless it's needed.
     if (!hasStoredSession() && !accountPage) {
       setLoading(false);

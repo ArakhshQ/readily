@@ -90,6 +90,22 @@ Render > Environment: set `NEXT_PUBLIC_CONTACT_EMAIL` (for example
 `hello@yourdomain.com`). It appears on the privacy, terms and refund pages, which
 Stripe and app stores expect. Redeploy.
 
+## 6b. Your admin page
+
+1. Supabase > SQL Editor: run `supabase/schema.sql` again (it adds visit counting and
+   the admin reports), then run this once with the email you sign in with:
+
+   ```sql
+   insert into public.admins (user_id) select id from auth.users where email = 'YOUR EMAIL';
+   ```
+
+2. Log in on the site, then open `/admin/`. Anyone else (or you, logged out) sees
+   "This page doesn't exist". Opening it once also stops your own browsing from being
+   counted in the visitor numbers on that browser.
+
+Visit counting keeps only daily totals (no cookies, IPs or user IDs) and skips browsers
+that send Do Not Track.
+
 ## 7. Domain and search
 
 1. Buy a domain, then Render > your site > **Settings > Custom Domains** > add it and

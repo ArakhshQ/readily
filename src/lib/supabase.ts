@@ -20,6 +20,18 @@ const KEY = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
 
 export const accountsEnabled = Boolean(URL_ && KEY);
 
+/** Calls a public database function directly, without loading the Supabase library.
+ *  Used for anonymous visit counting, so it never slows the page down. */
+export function publicRpc(name: string, args: Record<string, unknown>): void {
+  if (!accountsEnabled) return;
+  fetch(`${URL_}/rest/v1/rpc/${name}`, {
+    method: "POST",
+    keepalive: true,
+    headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  }).catch(() => {});
+}
+
 let client: Promise<SupabaseClient> | null = null;
 
 /** Loads the Supabase library only when an account feature is used. */

@@ -484,3 +484,235 @@ drop policy if exists "Read own AI outputs" on storage.objects;
 create policy "Read own AI outputs" on storage.objects
   for select to authenticated
   using (bucket_id = 'ai-outputs' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- =========================================================== admin and visit counting
+-- Admins: add yourself once (SQL Editor):
+--   insert into public.admins (user_id) select id from auth.users where email = 'YOUR EMAIL';
+create table if not exists public.admins (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  added_at timestamptz not null default now()
+);
+alter table public.admins enable row level security;
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer set search_path = public
+as $$
+  select exists (select 1 from public.admins where user_id = auth.uid());
+$$;
+revoke all on function public.is_admin() from public, anon;
+grant execute on function public.is_admin() to authenticated;
+
+-- Daily counts of visits, pages and tool runs. No cookies, no IPs, no user IDs:
+-- just "this page was viewed N times today".
+create table if not exists public.daily_stats (
+  day date not null default current_date,
+  kind text not null check (kind in ('visit', 'view', 'tool')),
+  key text not null,
+  count integer not null default 0,
+  primary key (day, kind, key)
+);
+alter table public.daily_stats enable row level security;
+
+create or replace function public.track(p_kind text, p_key text)
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if p_kind not in ('visit', 'view', 'tool') or p_key is null or p_key !~ '^[a-z0-9/_-]{1,80}$' then
+    return;
+  end if;
+  -- Keep the table small even if someone sends junk: at most 300 names per kind per day.
+  if not exists (select 1 from public.daily_stats where day = current_date and kind = p_kind and key = p_key)
+     and (select count(*) from public.daily_stats where day = current_date and kind = p_kind) >= 300 then
+    return;
+  end if;
+  insert into public.daily_stats (day, kind, key, count)
+  values (current_date, p_kind, p_key, 1)
+  on conflict (day, kind, key) do update set count = public.daily_stats.count + 1;
+end;
+$$;
+revoke all on function public.track(text, text) from public;
+grant execute on function public.track(text, text) to anon, authenticated;
+
+create or replace function public.require_admin()
+returns void
+language plpgsql
+stable
+security definer set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not allowed' using errcode = '42501';
+  end if;
+end;
+$$;
+revoke all on function public.require_admin() from public, anon, authenticated;
+
+-- Headline numbers for the admin page.
+create or replace function public.admin_overview()
+returns json
+language plpgsql
+stable
+security definer set search_path = public
+as $$
+declare
+  r json;
+begin
+  perform public.require_admin();
+  select json_build_object(
+    'users', (select count(*) from public.profiles),
+    'new_today', (select count(*) from public.profiles where created_at >= current_date),
+    'new_7d', (select count(*) from public.profiles where created_at >= current_date - 6),
+    'active_today', (
+      select count(distinct u) from (
+        select user_id u from public.history where created_at >= current_date
+        union select user_id from public.ai_jobs where created_at >= current_date
+      ) a),
+    'visits_today', (select coalesce(sum(count), 0) from public.daily_stats where kind = 'visit' and day = current_date),
+    'visits_7d', (select coalesce(sum(count), 0) from public.daily_stats where kind = 'visit' and day >= current_date - 6),
+    'tool_runs_today', (select coalesce(sum(count), 0) from public.daily_stats where kind = 'tool' and day = current_date),
+    'tool_runs_7d', (select coalesce(sum(count), 0) from public.daily_stats where kind = 'tool' and day >= current_date - 6),
+    'ai_jobs_today', (select count(*) from public.ai_jobs where created_at >= current_date and status = 'succeeded'),
+    'credits_today', (select coalesce(sum(credits), 0) from public.ai_jobs where created_at >= current_date and status = 'succeeded'),
+    'plans', (select json_object_agg(plan, n) from (select plan, count(*) n from public.profiles group by plan) p),
+    'waitlist', (select json_object_agg(plan_interest, n) from (select plan_interest, count(*) n from public.profiles where plan_interest is not null and plan = 'free' group by plan_interest) w),
+    'paid', (select json_object_agg(k, n) from (select plan || '_' || coalesce(billing_interval, 'month') k, count(*) n from public.profiles where plan <> 'free' group by 1) x)
+  ) into r;
+  return r;
+end;
+$$;
+
+-- One row per day: visits, page views, tool runs, sign-ups, active users, AI jobs.
+create or replace function public.admin_daily(p_days integer default 30)
+returns table (day date, visits bigint, views bigint, tool_runs bigint, signups bigint, active_users bigint, ai_jobs bigint)
+language plpgsql
+stable
+security definer set search_path = public
+as $$
+begin
+  perform public.require_admin();
+  return query
+  select d::date,
+    coalesce((select sum(s.count) from public.daily_stats s where s.day = d::date and s.kind = 'visit'), 0)::bigint,
+    coalesce((select sum(s.count) from public.daily_stats s where s.day = d::date and s.kind = 'view'), 0)::bigint,
+    coalesce((select sum(s.count) from public.daily_stats s where s.day = d::date and s.kind = 'tool'), 0)::bigint,
+    (select count(*) from public.profiles p where p.created_at::date = d::date)::bigint,
+    (select count(distinct u) from (
+      select h.user_id u from public.history h where h.created_at::date = d::date
+      union select j.user_id from public.ai_jobs j where j.created_at::date = d::date
+    ) a)::bigint,
+    (select count(*) from public.ai_jobs j where j.created_at::date = d::date and j.status = 'succeeded')::bigint
+  from generate_series(current_date - (least(greatest(p_days, 1), 365) - 1), current_date, interval '1 day') d
+  order by 1;
+end;
+$$;
+
+-- Most-used tools over the last N days (everyone, signed in or not).
+create or replace function public.admin_top_tools(p_days integer default 30)
+returns table (tool text, uses bigint)
+language plpgsql
+stable
+security definer set search_path = public
+as $$
+begin
+  perform public.require_admin();
+  return query
+  select s.key, sum(s.count)::bigint
+  from public.daily_stats s
+  where s.kind = 'tool' and s.day >= current_date - (least(greatest(p_days, 1), 365) - 1)
+  group by s.key
+  order by 2 desc
+  limit 50;
+end;
+$$;
+
+-- Most-viewed pages over the last N days.
+create or replace function public.admin_top_pages(p_days integer default 30)
+returns table (page text, views bigint)
+language plpgsql
+stable
+security definer set search_path = public
+as $$
+begin
+  perform public.require_admin();
+  return query
+  select s.key, sum(s.count)::bigint
+  from public.daily_stats s
+  where s.kind = 'view' and s.day >= current_date - (least(greatest(p_days, 1), 365) - 1)
+  group by s.key
+  order by 2 desc
+  limit 30;
+end;
+$$;
+
+-- Where visitors came from (the site that linked to Readily, or "direct").
+create or replace function public.admin_top_sources(p_days integer default 30)
+returns table (source text, visits bigint)
+language plpgsql
+stable
+security definer set search_path = public
+as $$
+begin
+  perform public.require_admin();
+  return query
+  select s.key, sum(s.count)::bigint
+  from public.daily_stats s
+  where s.kind = 'visit' and s.day >= current_date - (least(greatest(p_days, 1), 365) - 1)
+  group by s.key
+  order by 2 desc
+  limit 20;
+end;
+$$;
+
+-- Signed-up users with their plan, waitlist choice and recent use.
+create or replace function public.admin_users(p_search text default '', p_filter text default 'all', p_limit integer default 50, p_offset integer default 0)
+returns table (
+  id uuid, email text, full_name text, plan text, plan_interest text, credits integer,
+  created_at timestamptz, last_active timestamptz, uses_30d bigint, ai_jobs_30d bigint, total bigint
+)
+language plpgsql
+stable
+security definer set search_path = public
+as $$
+begin
+  perform public.require_admin();
+  return query
+  with base as (
+    select p.id, u.email::text, p.full_name, p.plan, p.plan_interest, p.credits, p.created_at,
+      greatest(
+        (select max(h.created_at) from public.history h where h.user_id = p.id),
+        (select max(j.created_at) from public.ai_jobs j where j.user_id = p.id),
+        u.last_sign_in_at
+      ) as last_active,
+      (select count(*) from public.history h where h.user_id = p.id and h.created_at >= now() - interval '30 days') as uses_30d,
+      (select count(*) from public.ai_jobs j where j.user_id = p.id and j.created_at >= now() - interval '30 days') as ai_jobs_30d
+    from public.profiles p
+    join auth.users u on u.id = p.id
+    where (coalesce(p_search, '') = '' or u.email ilike '%' || p_search || '%' or p.full_name ilike '%' || p_search || '%')
+      and (p_filter = 'all'
+        or (p_filter = 'paid' and p.plan <> 'free')
+        or (p_filter = 'waitlist' and p.plan_interest is not null and p.plan = 'free'))
+  )
+  select b.*, count(*) over () as total
+  from base b
+  order by b.created_at desc
+  limit least(greatest(p_limit, 1), 500) offset greatest(p_offset, 0);
+end;
+$$;
+
+revoke all on function public.admin_overview() from public, anon;
+revoke all on function public.admin_daily(integer) from public, anon;
+revoke all on function public.admin_top_tools(integer) from public, anon;
+revoke all on function public.admin_top_pages(integer) from public, anon;
+revoke all on function public.admin_top_sources(integer) from public, anon;
+revoke all on function public.admin_users(text, text, integer, integer) from public, anon;
+grant execute on function public.admin_overview() to authenticated;
+grant execute on function public.admin_daily(integer) to authenticated;
+grant execute on function public.admin_top_tools(integer) to authenticated;
+grant execute on function public.admin_top_pages(integer) to authenticated;
+grant execute on function public.admin_top_sources(integer) to authenticated;
+grant execute on function public.admin_users(text, text, integer, integer) to authenticated;

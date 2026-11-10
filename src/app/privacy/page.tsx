@@ -110,18 +110,24 @@ export default function Privacy() {
         Like every website, the servers that deliver Readily see standard request information such as your IP address, browser type and the
         page you asked for. Our hosting provider may keep this in short-lived logs to keep the service running and secure.
       </p>
+      <p>
+        To see which tools people find useful, Readily counts visits with its own simple counter, not a third-party analytics service. It
+        keeps only daily totals: how many browsers visited, which pages were opened, which tools finished a result, and the website that
+        linked to us (for example &quot;google.com&quot;). No cookies, IP addresses or account details are stored with these counts, so they
+        can&apos;t be traced back to you. If your browser sends &quot;Do Not Track&quot; or Global Privacy Control, you aren&apos;t counted at all.
+      </p>
 
       <h2>7. Cookies and storage</h2>
       <p>
         Readily doesn&apos;t use advertising cookies or third-party trackers. If you sign in, your browser keeps a sign-in token so you stay
-        signed in. We also remember a few small preferences on your device, such as when you last saw the sign-up reminder. Readily can save its
+        signed in. We also remember a few small preferences on your device, such as when you last saw the sign-up reminder and the date of your last visit (so a visit is only counted once a day). Readily can save its
         own pages and code on your device so it opens quickly and works offline; this never includes your files.
       </p>
 
       <h2>8. Legal bases and your rights</h2>
       <p>
         We process account data to provide the service you asked for (contract), payment data to bill you and meet legal duties (contract and
-        legal obligation), and security logs to keep Readily safe (legitimate interest). Depending on where you live, you may have the right to
+        legal obligation), and security logs and visit totals to keep Readily safe and improve it (legitimate interest). Depending on where you live, you may have the right to
         access, correct, delete or export your data, and to object to or restrict processing. You can do most of this yourself from your
         dashboard; for anything else, contact us{SITE.contactEmail ? " at the address below" : ""}. You can also complain to your local data
         protection authority.

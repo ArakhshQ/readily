@@ -10,6 +10,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { RegisterSW } from "@/components/RegisterSW";
 import { AuthProvider } from "@/components/AuthProvider";
 import { SignupNudge } from "@/components/SignupNudge";
+import { Analytics } from "@/components/Analytics";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -73,6 +74,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main id="main">{children}</main>
           <SiteFooter />
           <SignupNudge />
+          <Analytics />
         </AuthProvider>
         <RegisterSW />
       </body>

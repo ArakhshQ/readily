@@ -2901,3 +2901,319 @@ select.input {
   color: var(--ink);
   font-size: 17px;
 }
+
+/* ------------------------------------------------------------ admin */
+
+.admin {
+  display: grid;
+  gap: 20px;
+  padding-top: 32px;
+  padding-bottom: 64px;
+  min-height: 60vh;
+}
+.admin-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.admin-head h1 {
+  font-size: clamp(30px, 4vw, 42px);
+}
+.admin .eyebrow {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--teal);
+  margin-bottom: 2px;
+}
+.admin-head-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.admin-updated,
+.admin-sub {
+  font-size: 14px;
+  color: var(--muted);
+}
+.admin-updated {
+  margin-top: -12px;
+}
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 860px) {
+  .admin-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 520px) {
+  .admin-stats {
+    grid-template-columns: 1fr;
+  }
+}
+.admin-stats .stat small {
+  font-size: 14px;
+}
+.admin-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  padding: 20px;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0;
+}
+.admin-card h2 {
+  font-size: 19px;
+}
+.admin-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 860px) {
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.admin-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--line);
+}
+.admin-tabs button {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 8px 12px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+.admin-tabs button:hover {
+  color: var(--ink);
+}
+.admin-tabs button.on {
+  color: var(--ink);
+  border-bottom-color: var(--cobalt);
+}
+.admin-tabs button:focus-visible,
+.admin-chart:focus-visible {
+  outline: 3px solid var(--cobalt);
+  outline-offset: 2px;
+  border-radius: var(--radius-s);
+}
+.admin-chart {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+.admin-chart svg {
+  display: block;
+}
+.admin-chart .grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.admin-chart .axis {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+.admin-chart .tick {
+  fill: var(--muted);
+  font-size: 12px;
+  font-family: var(--font);
+}
+.admin-chart .line {
+  fill: none;
+  stroke: var(--cobalt);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.admin-chart .area {
+  fill: var(--cobalt);
+  opacity: 0.08;
+}
+.admin-chart .crosshair {
+  stroke: var(--ink-2);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.admin-chart .dot {
+  fill: var(--cobalt);
+  stroke: var(--white);
+  stroke-width: 2;
+}
+.admin-chart-empty {
+  height: 240px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.admin-tip {
+  position: absolute;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: var(--ink);
+  color: var(--white);
+  border-radius: var(--radius-s);
+  padding: 6px 10px;
+  display: grid;
+  font-size: 13px;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgb(15 27 61 / 0.18);
+}
+.admin-tip span {
+  opacity: 0.8;
+}
+.admin-tip strong {
+  font-size: 15px;
+}
+.admin-table-view summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cobalt);
+}
+.admin-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin-top: 8px;
+}
+.admin-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line-strong);
+  white-space: nowrap;
+}
+.admin-table td {
+  padding: 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  white-space: nowrap;
+  color: var(--ink-2);
+}
+.admin-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.admin-table td strong {
+  display: block;
+  color: var(--ink);
+}
+.admin-table td span:not(.plan-badge) {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+}
+.plan-badge.paid {
+  background: var(--teal-wash);
+  color: var(--teal);
+}
+.admin-wants {
+  margin-top: 4px;
+  color: var(--amber-ink) !important;
+}
+.admin-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.admin-bars li {
+  display: grid;
+  grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 14px;
+}
+.admin-bars .label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+}
+.admin-bars .track {
+  height: 12px;
+  background: var(--paper);
+  border-radius: 0 4px 4px 0;
+}
+.admin-bars .fill {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  background: var(--cobalt);
+  border-radius: 0 4px 4px 0;
+}
+.admin-bars .value {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  min-width: 3ch;
+  text-align: right;
+}
+@media (max-width: 520px) {
+  .admin-bars li {
+    grid-template-columns: minmax(0, 8rem) minmax(0, 1fr) auto;
+  }
+}
+.admin-more {
+  justify-self: start;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cobalt);
+  cursor: pointer;
+}
+.admin-empty {
+  color: var(--muted);
+  font-size: 14px;
+}
+.admin-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.admin-filters .input {
+  flex: 1 1 240px;
+  max-width: 360px;
+}
+.admin-pager {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--muted);
+}
