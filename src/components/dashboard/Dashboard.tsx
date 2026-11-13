@@ -454,7 +454,7 @@ function Settings({ profile, email, onName, onSignOut }: { profile: Profile | nu
   }
   async function savePw(e: React.FormEvent) {
     e.preventDefault();
-    if (pw.length < 8) return setMsg({ kind: "error", text: "Choose a password with at least 8 characters." });
+    if (pw.length < 8 || !/[a-z]/i.test(pw) || !/[0-9]/.test(pw)) return setMsg({ kind: "error", text: "Choose a password with at least 8 characters, mixing letters and numbers." });
     try {
       const sb = await getSupabase();
       const { error } = await sb.auth.updateUser({ password: pw });

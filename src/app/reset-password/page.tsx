@@ -30,8 +30,8 @@ export default function ResetPassword() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (password.length < 8) {
-      setError("Choose a password with at least 8 characters.");
+    if (password.length < 8 || !/[a-z]/i.test(password) || !/[0-9]/.test(password)) {
+      setError("Choose a password with at least 8 characters, mixing letters and numbers.");
       return;
     }
     setBusy(true);
@@ -51,7 +51,7 @@ export default function ResetPassword() {
   return (
     <AuthShell aside={false} title="Choose a new password" intro={`For ${session.user.email}`}>
       <form className="auth-stack" onSubmit={submit} noValidate>
-        <PasswordField id="newpw" label="New password" value={password} onChange={setPassword} autoComplete="new-password" hint="At least 8 characters." />
+        <PasswordField id="newpw" label="New password" value={password} onChange={setPassword} autoComplete="new-password" hint="At least 8 characters, with letters and numbers." />
         {error && <Message kind="error">{error}</Message>}
         <button type="submit" className="btn btn-primary btn-block" disabled={busy || !password}>
           {busy ? "Saving" : "Save new password"}

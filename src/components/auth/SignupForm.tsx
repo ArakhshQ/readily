@@ -40,8 +40,8 @@ export function SignupForm() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (password.length < 8) {
-      setError("Choose a password with at least 8 characters.");
+    if (password.length < 8 || !/[a-z]/i.test(password) || !/[0-9]/.test(password)) {
+      setError("Choose a password with at least 8 characters, mixing letters and numbers.");
       return;
     }
     setBusy(true);
@@ -124,7 +124,7 @@ export function SignupForm() {
           </label>
           <input id="email" className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required placeholder="you@example.com" />
         </div>
-        <PasswordField id="password" label="Password" value={password} onChange={setPassword} autoComplete="new-password" hint="At least 8 characters." />
+        <PasswordField id="password" label="Password" value={password} onChange={setPassword} autoComplete="new-password" hint="At least 8 characters, with letters and numbers." />
         {error && <Message kind="error">{error}</Message>}
         <button type="submit" className="btn btn-primary btn-block" disabled={busy || !email || !password}>
           {busy ? "Creating your account" : "Create account"}
