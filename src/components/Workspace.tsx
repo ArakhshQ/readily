@@ -6,6 +6,7 @@ import { Dropzone } from "./Dropzone";
 import { FileList, type Item } from "./FileList";
 import { Message, Progress } from "./Message";
 import { ResultPanel } from "./ResultPanel";
+import { ToolErrorMessage } from "./ToolErrorMessage";
 import type { Output } from "@/lib/files";
 import type { Tool, ToolSlug } from "@/lib/tools";
 
@@ -78,7 +79,7 @@ export function Workspace(p: Props) {
           </p>
         </div>
       )}
-      {p.error && <Message kind="error">{p.error}</Message>}
+      {p.error && <ToolErrorMessage text={p.error} files={p.items.map((it) => it.file)} />}
       {p.outputs && <ResultPanel tool={p.tool.slug} outputs={p.outputs} zipName={p.zipName} next={p.next} onRestart={p.onRestart} />}
     </div>
   );

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAccess } from "../Access";
 import { Message, Progress } from "../Message";
 import { ResultPanel } from "../ResultPanel";
+import { ToolErrorMessage } from "../ToolErrorMessage";
 import { useRun } from "../useRun";
 import { VoicePicker } from "./VoicePicker";
 import { formatBytes } from "@/lib/files";
@@ -58,7 +59,7 @@ export default function AiVoiceover() {
         </div>
       )}
       {r.busy && <Progress value={r.progress} label={r.status || "Recording"} />}
-      {r.error && <Message kind="error">{r.error}</Message>}
+      {r.error && <ToolErrorMessage text={r.error} />}
       {r.outputs && <ResultPanel tool="ai-voiceover" outputs={r.outputs} zipName="readily-voiceover.zip" next={["voice-changer", "convert-audio"]} onRestart={() => (setText(""), r.reset())} />}
     </div>
   );

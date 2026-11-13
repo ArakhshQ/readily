@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAccess } from "../Access";
 import { Dropzone } from "../Dropzone";
 import { Download, Refresh } from "../Icons";
+import { ToolErrorMessage } from "../ToolErrorMessage";
 import { Message } from "../Message";
 import { useFiles } from "../useFiles";
 import { baseName, downloadBlob } from "@/lib/files";
@@ -98,7 +99,7 @@ export default function ChatWithPdf() {
         {busy && <p className="chat-a chat-wait">Reading the document…</p>}
         <div ref={end} />
       </div>
-      {error && <Message kind="error">{error}</Message>}
+      {error && <ToolErrorMessage text={error} files={item ? [item.file] : undefined} />}
       <form className="chat-ask" onSubmit={ask}>
         <label className="sr-only" htmlFor="question">
           Your question

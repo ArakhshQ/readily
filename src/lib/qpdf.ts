@@ -90,7 +90,7 @@ export async function protectPdf(file: File, password: string, opts: { allowPrin
     o,
   ]);
   if (!out) {
-    if (/password/i.test(err)) throw new Error("This PDF is already password-protected. Unlock it first, then protect it again.");
+    if (/password/i.test(err)) throw new Error("This PDF is already password-protected. Remove the old password with Unlock PDF first, then protect it again.");
     throw new Error(`This PDF couldn't be protected. ${err.split("\n")[0] || "It may be damaged."}`);
   }
   const blob = new Blob([out as BlobPart], { type: "application/pdf" });

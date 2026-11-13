@@ -15,7 +15,7 @@ export async function openPdf(file: File): Promise<PDFDocumentProxy> {
   } catch (e) {
     const name = (e as { name?: string })?.name;
     if (name === "PasswordException") {
-      throw new Error(`${file.name} is password-protected. Remove the password in your PDF reader, then try again.`);
+      throw new Error(`${file.name} is password-protected. Remove the password with Unlock PDF (you'll need the password), then try again.`);
     }
     throw new Error(`${file.name} couldn't be read as a PDF. It may be damaged.`);
   }

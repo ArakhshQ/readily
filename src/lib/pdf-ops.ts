@@ -27,7 +27,7 @@ async function loadPdf(file: File) {
   } catch (e) {
     const msg = e instanceof Error ? e.message : "";
     if (/encrypt/i.test(msg)) {
-      throw new Error(`${file.name} is password-protected. Remove the password in your PDF reader, then try again.`);
+      throw new Error(`${file.name} is password-protected. Remove the password with Unlock PDF (you'll need the password), then try again.`);
     }
     throw new Error(`${file.name} couldn't be read as a PDF. It may be damaged.`);
   }
