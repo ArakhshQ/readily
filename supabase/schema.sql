@@ -26,11 +26,11 @@ alter table public.profiles enable row level security;
 
 drop policy if exists "Read own profile" on public.profiles;
 create policy "Read own profile" on public.profiles
-  for select using (auth.uid() = id);
+  for select using ((select auth.uid()) = id);
 
 drop policy if exists "Update own profile" on public.profiles;
 create policy "Update own profile" on public.profiles
-  for update using (auth.uid() = id) with check (auth.uid() = id);
+  for update using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
 
 -- Users may change their name and waitlist choice, never their plan.
 revoke update on public.profiles from anon, authenticated;
@@ -66,10 +66,12 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+-- Only runs as a trigger; nobody can call it directly.
+revoke all on function public.handle_new_user() from public, anon, authenticated;
 
 -- Storage and history allowances per plan.
 create or replace function public.plan_storage_bytes(p text)
-returns bigint language sql immutable as $$
+returns bigint language sql immutable set search_path = '' as $$
   select case p
     when 'premium' then 25::bigint * 1024 * 1024 * 1024
     when 'pro' then 10::bigint * 1024 * 1024 * 1024
@@ -93,15 +95,15 @@ alter table public.history enable row level security;
 
 drop policy if exists "Read own history" on public.history;
 create policy "Read own history" on public.history
-  for select using (auth.uid() = user_id);
+  for select using ((select auth.uid()) = user_id);
 
 drop policy if exists "Add own history" on public.history;
 create policy "Add own history" on public.history
-  for insert with check (auth.uid() = user_id);
+  for insert with check ((select auth.uid()) = user_id);
 
 drop policy if exists "Delete own history" on public.history;
 create policy "Delete own history" on public.history
-  for delete using (auth.uid() = user_id);
+  for delete using ((select auth.uid()) = user_id);
 
 -- Free plan keeps 30 days: tidy old rows whenever a new one is added.
 create or replace function public.trim_free_history()
@@ -122,6 +124,8 @@ drop trigger if exists history_trim on public.history;
 create trigger history_trim
   after insert on public.history
   for each row execute function public.trim_free_history();
+-- Only runs as a trigger; nobody can call it directly.
+revoke all on function public.trim_free_history() from public, anon, authenticated;
 
 -- =========================================================== saved files
 create table if not exists public.files (
@@ -140,15 +144,15 @@ alter table public.files enable row level security;
 
 drop policy if exists "Read own files" on public.files;
 create policy "Read own files" on public.files
-  for select using (auth.uid() = user_id);
+  for select using ((select auth.uid()) = user_id);
 
 drop policy if exists "Add own files" on public.files;
 create policy "Add own files" on public.files
-  for insert with check (auth.uid() = user_id and split_part(path, '/', 1) = auth.uid()::text);
+  for insert with check ((select auth.uid()) = user_id and split_part(path, '/', 1) = (select auth.uid())::text);
 
 drop policy if exists "Delete own files" on public.files;
 create policy "Delete own files" on public.files
-  for delete using (auth.uid() = user_id);
+  for delete using ((select auth.uid()) = user_id);
 
 -- Enforce each plan's storage allowance on the server.
 create or replace function public.check_storage_quota()
@@ -173,6 +177,8 @@ drop trigger if exists files_quota on public.files;
 create trigger files_quota
   before insert on public.files
   for each row execute function public.check_storage_quota();
+-- Only runs as a trigger; nobody can call it directly.
+revoke all on function public.check_storage_quota() from public, anon, authenticated;
 
 -- =========================================================== storage bucket
 -- Private bucket; each user can only reach the folder named after their id.
@@ -183,17 +189,17 @@ on conflict (id) do update set public = false, file_size_limit = 52428800;
 drop policy if exists "Read own stored files" on storage.objects;
 create policy "Read own stored files" on storage.objects
   for select to authenticated
-  using (bucket_id = 'user-files' and (storage.foldername(name))[1] = auth.uid()::text);
+  using (bucket_id = 'user-files' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 drop policy if exists "Upload own stored files" on storage.objects;
 create policy "Upload own stored files" on storage.objects
   for insert to authenticated
-  with check (bucket_id = 'user-files' and (storage.foldername(name))[1] = auth.uid()::text);
+  with check (bucket_id = 'user-files' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 drop policy if exists "Delete own stored files" on storage.objects;
 create policy "Delete own stored files" on storage.objects
   for delete to authenticated
-  using (bucket_id = 'user-files' and (storage.foldername(name))[1] = auth.uid()::text);
+  using (bucket_id = 'user-files' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 -- =========================================================== delete account
 -- The app removes the user's stored files first, then calls this.
@@ -232,15 +238,15 @@ alter table public.profiles add column if not exists cancel_at_period_end boolea
 revoke update on public.profiles from anon, authenticated;
 grant update (full_name, plan_interest) on public.profiles to authenticated;
 
-create or replace function public.trial_credits() returns integer language sql immutable as $$ select 20 $$;
+create or replace function public.trial_credits() returns integer language sql immutable set search_path = '' as $$ select 20 $$;
 
 create or replace function public.plan_credits(p text)
-returns integer language sql immutable as $$
+returns integer language sql immutable set search_path = '' as $$
   select case p when 'premium' then 2000 when 'pro' then 700 when 'basic' then 200 else 0 end;
 $$;
 
 create or replace function public.plan_level(p text)
-returns integer language sql immutable as $$
+returns integer language sql immutable set search_path = '' as $$
   select case p when 'premium' then 3 when 'pro' then 2 when 'basic' then 1 else 0 end;
 $$;
 
@@ -270,7 +276,7 @@ create table if not exists public.ai_jobs (
 create index if not exists ai_jobs_user_time on public.ai_jobs (user_id, created_at desc);
 alter table public.ai_jobs enable row level security;
 drop policy if exists "Read own jobs" on public.ai_jobs;
-create policy "Read own jobs" on public.ai_jobs for select using (auth.uid() = user_id);
+create policy "Read own jobs" on public.ai_jobs for select using ((select auth.uid()) = user_id);
 
 -- Every credit change, for support and refunds.
 create table if not exists public.credit_events (
@@ -285,7 +291,7 @@ create table if not exists public.credit_events (
 create index if not exists credit_events_user_time on public.credit_events (user_id, created_at desc);
 alter table public.credit_events enable row level security;
 drop policy if exists "Read own credit events" on public.credit_events;
-create policy "Read own credit events" on public.credit_events for select using (auth.uid() = user_id);
+create policy "Read own credit events" on public.credit_events for select using ((select auth.uid()) = user_id);
 
 -- One free try of each Basic and Pro tool per account.
 create table if not exists public.tool_trials (
@@ -296,7 +302,7 @@ create table if not exists public.tool_trials (
 );
 alter table public.tool_trials enable row level security;
 drop policy if exists "Read own trials" on public.tool_trials;
-create policy "Read own trials" on public.tool_trials for select using (auth.uid() = user_id);
+create policy "Read own trials" on public.tool_trials for select using ((select auth.uid()) = user_id);
 
 -- Stripe webhook events already handled (so a retried event is applied once).
 create table if not exists public.stripe_events (
@@ -305,6 +311,7 @@ create table if not exists public.stripe_events (
   created_at timestamptz not null default now()
 );
 alter table public.stripe_events enable row level security;
+revoke all on public.stripe_events from anon, authenticated;
 
 -- Paid plans get a fresh monthly allowance, also on yearly billing.
 create or replace function public.refresh_credits(p_user uuid)
@@ -478,12 +485,12 @@ on conflict (id) do update set public = false, file_size_limit = 524288000;
 drop policy if exists "Upload own AI inputs" on storage.objects;
 create policy "Upload own AI inputs" on storage.objects
   for insert to authenticated
-  with check (bucket_id = 'ai-inputs' and (storage.foldername(name))[1] = auth.uid()::text);
+  with check (bucket_id = 'ai-inputs' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 drop policy if exists "Read own AI outputs" on storage.objects;
 create policy "Read own AI outputs" on storage.objects
   for select to authenticated
-  using (bucket_id = 'ai-outputs' and (storage.foldername(name))[1] = auth.uid()::text);
+  using (bucket_id = 'ai-outputs' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 -- =========================================================== admin and visit counting
 -- Admins: add yourself once (SQL Editor):
@@ -493,14 +500,20 @@ create table if not exists public.admins (
   added_at timestamptz not null default now()
 );
 alter table public.admins enable row level security;
+revoke all on public.admins from anon, authenticated;
+grant select on public.admins to authenticated;
+drop policy if exists "Read own admin row" on public.admins;
+create policy "Read own admin row" on public.admins
+  for select to authenticated using (user_id = (select auth.uid()));
 
+-- Runs with the caller's own rights: it can only ever see the caller's own row.
 create or replace function public.is_admin()
 returns boolean
 language sql
 stable
-security definer set search_path = public
+security invoker set search_path = public
 as $$
-  select exists (select 1 from public.admins where user_id = auth.uid());
+  select exists (select 1 from public.admins where user_id = (select auth.uid()));
 $$;
 revoke all on function public.is_admin() from public, anon;
 grant execute on function public.is_admin() to authenticated;
@@ -515,6 +528,7 @@ create table if not exists public.daily_stats (
   primary key (day, kind, key)
 );
 alter table public.daily_stats enable row level security;
+revoke all on public.daily_stats from anon, authenticated;
 
 create or replace function public.track(p_kind text, p_key text)
 returns void
