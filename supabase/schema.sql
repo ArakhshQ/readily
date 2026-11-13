@@ -592,6 +592,8 @@ begin
     'tool_runs_7d', (select coalesce(sum(count), 0) from public.daily_stats where kind = 'tool' and day >= current_date - 6),
     'ai_jobs_today', (select count(*) from public.ai_jobs where created_at >= current_date and status = 'succeeded'),
     'credits_today', (select coalesce(sum(credits), 0) from public.ai_jobs where created_at >= current_date and status = 'succeeded'),
+    'ai_failed_today', (select count(*) from public.ai_jobs where created_at >= current_date and status = 'failed'),
+    'feedback_open', (select count(*) from public.feedback where not resolved),
     'plans', (select json_object_agg(plan, n) from (select plan, count(*) n from public.profiles group by plan) p),
     'waitlist', (select json_object_agg(plan_interest, n) from (select plan_interest, count(*) n from public.profiles where plan_interest is not null and plan = 'free' group by plan_interest) w),
     'paid', (select json_object_agg(k, n) from (select plan || '_' || coalesce(billing_interval, 'month') k, count(*) n from public.profiles where plan <> 'free' group by 1) x)
@@ -730,3 +732,127 @@ grant execute on function public.admin_top_tools(integer) to authenticated;
 grant execute on function public.admin_top_pages(integer) to authenticated;
 grant execute on function public.admin_top_sources(integer) to authenticated;
 grant execute on function public.admin_users(text, text, integer, integer) to authenticated;
+
+-- =========================================================== feedback and AI job health
+-- Anyone (signed in or not) can send feedback; only the admin can read it.
+create table if not exists public.feedback (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  user_id uuid default auth.uid() references auth.users (id) on delete set null,
+  kind text not null default 'problem' check (kind in ('problem', 'idea', 'praise')),
+  tool text check (tool is null or tool ~ '^[a-z0-9-]{1,60}$'),
+  page text check (page is null or char_length(page) <= 200),
+  message text not null check (char_length(btrim(message)) between 3 and 2000),
+  contact text check (contact is null or char_length(contact) <= 200),
+  resolved boolean not null default false
+);
+create index if not exists feedback_time on public.feedback (created_at desc);
+create index if not exists feedback_user on public.feedback (user_id, created_at);
+alter table public.feedback enable row level security;
+revoke all on public.feedback from anon, authenticated;
+grant insert (kind, tool, page, message, contact) on public.feedback to anon, authenticated;
+drop policy if exists "Anyone can send feedback" on public.feedback;
+create policy "Anyone can send feedback" on public.feedback
+  for insert to anon, authenticated
+  with check (resolved = false and (user_id is null or user_id = (select auth.uid())));
+
+-- Stops floods: at most 300 messages a day in total, 20 a day from one account.
+create or replace function public.feedback_limit()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if (select count(*) from public.feedback where created_at >= current_date) >= 300 then
+    raise exception 'Feedback is closed for today. Please email us instead.' using errcode = 'P0001';
+  end if;
+  if new.user_id is not null and (select count(*) from public.feedback where user_id = new.user_id and created_at >= current_date) >= 20 then
+    raise exception 'You''ve sent a lot of feedback today. Thank you! Please email us for anything else.' using errcode = 'P0001';
+  end if;
+  return new;
+end;
+$$;
+revoke all on function public.feedback_limit() from public, anon, authenticated;
+drop trigger if exists feedback_limit on public.feedback;
+create trigger feedback_limit before insert on public.feedback
+  for each row execute function public.feedback_limit();
+
+create or replace function public.admin_feedback(p_filter text default 'open', p_limit integer default 50)
+returns table (id uuid, created_at timestamptz, kind text, tool text, page text, message text, contact text, email text, resolved boolean)
+language plpgsql
+stable
+security definer set search_path = public
+as $$
+begin
+  perform public.require_admin();
+  return query
+  select f.id, f.created_at, f.kind, f.tool, f.page, f.message, f.contact, u.email::text, f.resolved
+  from public.feedback f
+  left join auth.users u on u.id = f.user_id
+  where p_filter = 'all' or (p_filter = 'open' and not f.resolved) or (p_filter = 'done' and f.resolved)
+  order by f.created_at desc
+  limit least(greatest(p_limit, 1), 500);
+end;
+$$;
+
+create or replace function public.admin_resolve_feedback(p_id uuid, p_resolved boolean default true)
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  perform public.require_admin();
+  update public.feedback set resolved = p_resolved where id = p_id;
+end;
+$$;
+
+-- AI jobs that failed recently, with the error, to spot a broken tool early.
+create or replace function public.admin_failed_jobs(p_days integer default 7, p_limit integer default 50)
+returns table (id uuid, created_at timestamptz, tool text, option text, credits integer, error text, email text)
+language plpgsql
+stable
+security definer set search_path = public
+as $$
+begin
+  perform public.require_admin();
+  return query
+  select j.id, j.created_at, j.tool, j.option, j.credits, j.error, u.email::text
+  from public.ai_jobs j
+  left join auth.users u on u.id = j.user_id
+  where j.status = 'failed' and j.created_at >= current_date - (least(greatest(p_days, 1), 365) - 1)
+  order by j.created_at desc
+  limit least(greatest(p_limit, 1), 200);
+end;
+$$;
+
+-- Success rate per AI tool over the last N days.
+create or replace function public.admin_ai_health(p_days integer default 7)
+returns table (tool text, succeeded bigint, failed bigint, running bigint, last_error text, last_failed timestamptz)
+language plpgsql
+stable
+security definer set search_path = public
+as $$
+begin
+  perform public.require_admin();
+  return query
+  select j.tool,
+    count(*) filter (where j.status = 'succeeded'),
+    count(*) filter (where j.status = 'failed'),
+    count(*) filter (where j.status = 'running'),
+    (array_agg(j.error order by j.created_at desc) filter (where j.status = 'failed'))[1],
+    max(j.created_at) filter (where j.status = 'failed')
+  from public.ai_jobs j
+  where j.created_at >= current_date - (least(greatest(p_days, 1), 365) - 1)
+  group by j.tool
+  order by 3 desc, 2 desc;
+end;
+$$;
+
+revoke all on function public.admin_feedback(text, integer) from public, anon;
+revoke all on function public.admin_resolve_feedback(uuid, boolean) from public, anon;
+revoke all on function public.admin_failed_jobs(integer, integer) from public, anon;
+revoke all on function public.admin_ai_health(integer) from public, anon;
+grant execute on function public.admin_feedback(text, integer) to authenticated;
+grant execute on function public.admin_resolve_feedback(uuid, boolean) to authenticated;
+grant execute on function public.admin_failed_jobs(integer, integer) to authenticated;
+grant execute on function public.admin_ai_health(integer) to authenticated;

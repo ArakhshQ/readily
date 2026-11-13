@@ -32,6 +32,7 @@ jobs:
           supabase functions deploy ai --project-ref "$PROJECT_REF" --yes
           supabase functions deploy billing --project-ref "$PROJECT_REF" --yes
           supabase functions deploy stripe-webhook --project-ref "$PROJECT_REF" --yes --no-verify-jwt
+          supabase functions deploy health --project-ref "$PROJECT_REF" --yes --no-verify-jwt
       - name: Tell the server where the website is
         run: |
           # The site's own address, with and without www, plus the old Render address so nothing breaks.

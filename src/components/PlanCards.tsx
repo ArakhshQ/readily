@@ -49,7 +49,6 @@ export function PlanCards() {
           const yearly = interval === "year" && p.yearly;
           return (
             <section key={p.id} className={`plan${p.highlight ? " plan-hi" : ""}`} aria-labelledby={`plan-${p.id}`}>
-              {p.highlight && <p className="plan-flag">Most popular</p>}
               <h2 id={`plan-${p.id}`}>{p.name}</h2>
               <p className="plan-price">
                 <strong>{yearly ? p.yearly : p.price}</strong> <span>{p.id === "free" ? p.period : yearly ? "per year" : "per month"}</span>

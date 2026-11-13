@@ -116,6 +116,10 @@ export default function Privacy() {
         linked to us (for example &quot;google.com&quot;). No cookies, IP addresses or account details are stored with these counts, so they
         can&apos;t be traced back to you. If your browser sends &quot;Do Not Track&quot; or Global Privacy Control, you aren&apos;t counted at all.
       </p>
+      <p>
+        If you send feedback, we keep your message, the page you sent it from, and either your account or the email you chose to give, so we
+        can fix problems and reply. Your files are never attached. Ask us any time to delete a message you sent.
+      </p>
 
       <h2>7. Cookies and storage</h2>
       <p>

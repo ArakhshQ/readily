@@ -3,6 +3,7 @@
 // Loads only the code for the tool on the current page.
 import dynamic from "next/dynamic";
 import { AccessBanner, AccessProvider } from "./Access";
+import { ToolFeedback } from "./Feedback";
 import type { ToolSlug } from "@/lib/tools";
 
 const loading = () => <div className="workspace" style={{ minHeight: 280 }} aria-busy="true" />;
@@ -63,6 +64,7 @@ export function ToolRunner({ slug }: { slug: ToolSlug }) {
     <AccessProvider slug={slug}>
       <AccessBanner />
       <Runner />
+      <ToolFeedback tool={slug} />
     </AccessProvider>
   );
 }

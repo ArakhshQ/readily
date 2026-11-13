@@ -6,6 +6,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Message } from "./Message";
+import { openFeedback } from "./Feedback";
 import { setHandoff } from "@/lib/handoff";
 import { TOOLS, type Tool } from "@/lib/tools";
 
@@ -39,14 +40,19 @@ export function ToolErrorMessage({ text, files: all }: { text: string; files?: F
   return (
     <Message kind="error">
       <p>{body}</p>
-      {first && (
-        <p style={{ marginTop: 10 }}>
+      <p className="error-actions">
+        {first && (
           <Link className="btn btn-secondary btn-small" href={`/${first.slug}/`} onClick={() => files?.length && setHandoff(files)}>
             Open {first.name}
             {files?.length ? (files.length === 1 ? " with this file" : " with these files") : ""}
           </Link>
-        </p>
-      )}
+        )}
+        {!first && (
+          <button type="button" className="link-btn" onClick={() => openFeedback(`It showed this error: "${text}"\n\nWhat I was doing: `)}>
+            Report this problem
+          </button>
+        )}
+      </p>
     </Message>
   );
 }

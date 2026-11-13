@@ -4,3 +4,7 @@ project_id = "readily"
 # Stripe signs its webhook requests, so that function skips the usual login check.
 [functions.stripe-webhook]
 verify_jwt = false
+
+# Uptime monitors call the health check without logging in.
+[functions.health]
+verify_jwt = false

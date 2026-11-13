@@ -3217,3 +3217,165 @@ select.input {
   font-size: 14px;
   color: var(--muted);
 }
+
+/* ------------------------------------------------------------ feedback */
+
+.tool-feedback {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 15px;
+}
+.tool-feedback h2 {
+  font-size: 19px;
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+.feedback-form {
+  display: grid;
+  gap: 12px;
+  max-width: 640px;
+}
+.feedback-text {
+  height: auto;
+  min-height: 112px;
+  padding: 12px 14px;
+  line-height: 1.5;
+  resize: vertical;
+  font: inherit;
+}
+.feedback-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.feedback-actions .fine {
+  flex: 1 1 220px;
+  font-size: 13px;
+}
+.feedback-done {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  color: var(--ink);
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--teal-wash);
+  max-width: 640px;
+}
+.feedback-done p {
+  flex: 1 1 240px;
+}
+.feedback-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  padding: 22px;
+  color: var(--ink);
+  background: var(--white);
+  box-shadow: 0 20px 60px rgb(15 27 61 / 0.25);
+}
+.feedback-dialog::backdrop {
+  background: rgb(15 27 61 / 0.45);
+}
+.feedback-dialog h2 {
+  font-size: 21px;
+  margin-bottom: 4px;
+}
+.feedback-dialog > .fine {
+  margin-bottom: 14px;
+}
+.footer-feedback {
+  font: inherit;
+  color: inherit;
+}
+.error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.error-actions:empty {
+  display: none;
+}
+.error-actions {
+  margin-top: 10px;
+}
+.admin-bad {
+  color: var(--danger);
+  font-weight: 700;
+}
+.admin-table td.admin-wrap {
+  white-space: normal;
+  min-width: 260px;
+  max-width: 520px;
+}
+.admin-error-text {
+  color: var(--ink-2) !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px !important;
+  word-break: break-word;
+}
+.admin-failures,
+.admin-feedback {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+.admin-failures li,
+.admin-feedback li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.admin-failures li:last-child,
+.admin-feedback li:last-child {
+  border-bottom: 0;
+}
+.admin-feedback li.done {
+  opacity: 0.6;
+}
+.admin-feedback-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.admin-feedback-head > span:nth-child(2) {
+  flex: 1 1 200px;
+  color: var(--muted);
+}
+.admin-feedback-msg {
+  color: var(--ink);
+  font-size: 15px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.fb-kind {
+  display: inline-block;
+  padding: 1px 10px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.fb-problem {
+  background: var(--danger-wash);
+  color: var(--danger);
+}
+.fb-idea {
+  background: var(--cobalt-wash);
+  color: var(--ink);
+}
+.fb-praise {
+  background: var(--teal-wash);
+  color: var(--teal);
+}

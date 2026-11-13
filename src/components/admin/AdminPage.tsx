@@ -21,6 +21,8 @@ interface Overview {
   tool_runs_7d: number;
   ai_jobs_today: number;
   credits_today: number;
+  ai_failed_today?: number;
+  feedback_open?: number;
   plans: Record<string, number> | null;
   waitlist: Record<string, number> | null;
   paid: Record<string, number> | null;
@@ -213,7 +215,11 @@ function Admin() {
         <Stat label="Signed-up users" value={n(o?.users)} note={`+${n(o?.new_today)} today, +${n(o?.new_7d)} this week`} />
         <Stat label="Visitors today" value={n(o?.visits_today)} note={`${n(o?.visits_7d)} in the last 7 days`} />
         <Stat label="Tool runs today" value={n(o?.tool_runs_today)} note={`${n(o?.tool_runs_7d)} in the last 7 days`} />
-        <Stat label="Active users today" value={n(o?.active_today)} note={`${n(o?.ai_jobs_today)} AI jobs, ${n(o?.credits_today)} credits used`} />
+        <Stat
+          label="Active users today"
+          value={n(o?.active_today)}
+          note={`${n(o?.ai_jobs_today)} AI jobs${o?.ai_failed_today ? `, ${n(o.ai_failed_today)} failed` : ""}, ${n(o?.credits_today)} credits used`}
+        />
         <Stat
           label="Paid users"
           value={n(paidCount)}
@@ -309,6 +315,8 @@ function Admin() {
         </section>
       </div>
 
+      <AiHealth days={days} />
+      <FeedbackInbox />
       <Users />
     </div>
   );
@@ -614,6 +622,226 @@ function Users() {
             Next
           </button>
         </div>
+      )}
+    </section>
+  );
+}
+
+/* ---------------------------------------------------------------- AI tools health */
+
+interface HealthRow {
+  tool: string;
+  succeeded: number;
+  failed: number;
+  running: number;
+  last_error: string | null;
+  last_failed: string | null;
+}
+interface FailedJob {
+  id: string;
+  created_at: string;
+  tool: string;
+  option: string | null;
+  credits: number;
+  error: string | null;
+  email: string | null;
+}
+
+function AiHealth({ days }: { days: number }) {
+  const [rows, setRows] = useState<HealthRow[] | null>(null);
+  const [failures, setFailures] = useState<FailedJob[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    setError(null);
+    getSupabase()
+      .then((sb) => Promise.all([sb.rpc("admin_ai_health", { p_days: days }), sb.rpc("admin_failed_jobs", { p_days: days, p_limit: 30 })]))
+      .then(([h, f]) => {
+        if (!live) return;
+        if (h.error || f.error) throw h.error || f.error;
+        setRows(((h.data as HealthRow[]) ?? []).map((r) => ({ ...r, succeeded: Number(r.succeeded), failed: Number(r.failed), running: Number(r.running) })));
+        setFailures((f.data as FailedJob[]) ?? []);
+      })
+      .catch((e) => live && setError((e as { message?: string })?.message || "Couldn't load AI tool health."));
+    return () => {
+      live = false;
+    };
+  }, [days]);
+
+  const failedTotal = rows?.reduce((a, r) => a + r.failed, 0) ?? 0;
+  return (
+    <section className="admin-card">
+      <div>
+        <h2>AI tools health</h2>
+        <p className="admin-sub">
+          {rows ? (failedTotal ? `${n(failedTotal)} failed AI jobs in the last ${days} days. Credits were refunded automatically.` : `No failed AI jobs in the last ${days} days.`) : "Loading…"}
+        </p>
+      </div>
+      {error && (
+        <p className="msg-error" role="alert">
+          {error}
+        </p>
+      )}
+      {rows && rows.length > 0 && (
+        <div className="admin-scroll">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Tool</th>
+                <th className="num">Worked</th>
+                <th className="num">Failed</th>
+                <th className="num">Success</th>
+                <th>Latest error</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => {
+                const done = r.succeeded + r.failed;
+                const rate = done ? Math.round((r.succeeded / done) * 100) : null;
+                return (
+                  <tr key={r.tool}>
+                    <td>
+                      <strong>{toolName(r.tool)}</strong>
+                    </td>
+                    <td className="num">{n(r.succeeded)}</td>
+                    <td className="num">{r.failed ? <span className="admin-bad">{n(r.failed)}</span> : "0"}</td>
+                    <td className="num">{rate === null ? "–" : `${rate}%`}</td>
+                    <td className="admin-wrap">
+                      {r.last_error ? (
+                        <>
+                          <span className="admin-error-text">{r.last_error}</span>
+                          <span>{ago(r.last_failed)}</span>
+                        </>
+                      ) : (
+                        "–"
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {rows && rows.length === 0 && <p className="admin-empty">No AI jobs in this period yet.</p>}
+      {failures && failures.length > 0 && (
+        <details className="admin-table-view">
+          <summary>Show the last {failures.length} failures</summary>
+          <ol className="admin-failures">
+            {failures.map((f) => (
+              <li key={f.id}>
+                <div>
+                  <strong>{toolName(f.tool)}</strong>
+                  {f.option === "best" ? " (best quality)" : ""} · {ago(f.created_at)} · {f.email ?? "deleted account"} · {n(f.credits)} credits refunded
+                </div>
+                <p className="admin-error-text">{f.error || "No error message"}</p>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+    </section>
+  );
+}
+
+/* ---------------------------------------------------------------- feedback */
+
+interface FeedbackRow {
+  id: string;
+  created_at: string;
+  kind: "problem" | "idea" | "praise";
+  tool: string | null;
+  page: string | null;
+  message: string;
+  contact: string | null;
+  email: string | null;
+  resolved: boolean;
+}
+const KIND_LABEL = { problem: "Problem", idea: "Idea", praise: "Praise" } as const;
+
+function FeedbackInbox() {
+  const [filter, setFilter] = useState<"open" | "done" | "all">("open");
+  const [rows, setRows] = useState<FeedbackRow[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    let live = true;
+    setError(null);
+    getSupabase()
+      .then((sb) => sb.rpc("admin_feedback", { p_filter: filter, p_limit: 100 }))
+      .then(({ data, error }) => {
+        if (!live) return;
+        if (error) throw error;
+        setRows((data as FeedbackRow[]) ?? []);
+      })
+      .catch((e) => live && setError((e as { message?: string })?.message || "Couldn't load feedback."));
+    return () => {
+      live = false;
+    };
+  }, [filter, tick]);
+
+  const mark = async (id: string, resolved: boolean) => {
+    setRows((r) => r?.map((x) => (x.id === id ? { ...x, resolved } : x)) ?? null);
+    try {
+      const sb = await getSupabase();
+      const { error } = await sb.rpc("admin_resolve_feedback", { p_id: id, p_resolved: resolved });
+      if (error) throw error;
+      setTimeout(() => setTick((t) => t + 1), 600);
+    } catch (e) {
+      setError((e as { message?: string })?.message || "Couldn't update it.");
+    }
+  };
+
+  return (
+    <section className="admin-card">
+      <div className="admin-card-head">
+        <div>
+          <h2>Feedback</h2>
+          <p className="admin-sub">{rows ? `${n(rows.length)} ${filter === "open" ? "to read" : filter === "done" ? "marked done" : "messages"}` : "Loading…"}</p>
+        </div>
+        <div className="segmented" role="radiogroup" aria-label="Show feedback">
+          {(
+            [
+              ["open", "To read"],
+              ["done", "Done"],
+              ["all", "All"],
+            ] as const
+          ).map(([v, l]) => (
+            <label key={v}>
+              <input type="radio" name="fb-filter" checked={filter === v} onChange={() => setFilter(v)} />
+              <span>{l}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+      {error && (
+        <p className="msg-error" role="alert">
+          {error}
+        </p>
+      )}
+      {rows && rows.length === 0 && <p className="admin-empty">{filter === "open" ? "Nothing new. Feedback from the site shows up here." : "Nothing here."}</p>}
+      {rows && rows.length > 0 && (
+        <ol className="admin-feedback">
+          {rows.map((f) => (
+            <li key={f.id} className={f.resolved ? "done" : ""}>
+              <div className="admin-feedback-head">
+                <span className={`fb-kind fb-${f.kind}`}>{KIND_LABEL[f.kind]}</span>
+                <span>
+                  {f.tool ? <Link href={`/${f.tool}/`}>{toolName(f.tool)}</Link> : f.page || "Site"} · {ago(f.created_at)}
+                </span>
+                <button type="button" className="btn btn-secondary btn-small" onClick={() => mark(f.id, !f.resolved)}>
+                  {f.resolved ? "Reopen" : "Mark done"}
+                </button>
+              </div>
+              <p className="admin-feedback-msg">{f.message}</p>
+              <p className="admin-sub">
+                From {f.email ?? (f.contact ? `${f.contact} (not signed in)` : "a visitor (no reply address)")}
+              </p>
+            </li>
+          ))}
+        </ol>
       )}
     </section>
   );
