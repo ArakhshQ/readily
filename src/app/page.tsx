@@ -1,5 +1,6 @@
 import { HomeDrop } from "@/components/HomeDrop";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Check, ToolGlyph } from "@/components/Icons";
 import { PlanTag } from "@/components/PlanTag";
 import { ToolDirectory } from "@/components/ToolDirectory";
@@ -7,6 +8,8 @@ import { TOOLS, TOOL_BY_SLUG } from "@/lib/tools";
 
 const FREE = TOOLS.filter((t) => !t.level).length;
 const AI_PICKS = ["noise-remover", "remove-background", "transcribe", "studio-voice", "translate-document", "restore-photo", "ai-dubbing", "ai-photo-editor"] as const;
+
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 export default function Home() {
   return (

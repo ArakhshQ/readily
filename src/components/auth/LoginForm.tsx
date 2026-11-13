@@ -40,7 +40,7 @@ export function LoginForm() {
       const sb = await getSupabase();
       const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password });
       if (error) throw error;
-      router.replace(next);
+      // The sign-in state updates on its own; the effect above then moves on to `next`.
     } catch (x) {
       const msg = friendlyAuthError(x);
       setUnconfirmed(msg.startsWith("Confirm your email"));

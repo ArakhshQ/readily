@@ -139,7 +139,7 @@ export default function Pricing() {
               </tr>
               <tr>
                 <th scope="row">Saved files</th>
-                <td>100 MB</td>
+                <td>20 MB</td>
                 {paid.map((p) => (
                   <td key={p.id}>{Math.round(p.storageBytes / 1024 ** 3)} GB</td>
                 ))}

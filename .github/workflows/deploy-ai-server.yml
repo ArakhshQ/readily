@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["supabase/functions/**"]
+    paths: ["supabase/functions/**", ".github/workflows/deploy-ai-server.yml"]
 
 jobs:
   deploy:
@@ -15,7 +15,7 @@ jobs:
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-      SITE_URL: ${{ vars.SITE_URL || 'https://readily-3zay.onrender.com' }}
+      SITE_URL: ${{ vars.SITE_URL || 'https://readilytools.com' }}
     steps:
       - uses: actions/checkout@v4
       - name: Check the secrets are set
@@ -33,4 +33,9 @@ jobs:
           supabase functions deploy billing --project-ref "$PROJECT_REF" --yes
           supabase functions deploy stripe-webhook --project-ref "$PROJECT_REF" --yes --no-verify-jwt
       - name: Tell the server where the website is
-        run: supabase secrets set --project-ref "$PROJECT_REF" --yes SITE_URL="$SITE_URL" ALLOWED_ORIGINS="$SITE_URL"
+        run: |
+          # The site's own address, with and without www, plus the old Render address so nothing breaks.
+          HOST="${SITE_URL#https://}"; HOST="${HOST#www.}"; HOST="${HOST%/}"
+          ORIGINS="https://$HOST,https://www.$HOST,https://readily-3zay.onrender.com"
+          supabase secrets set --project-ref "$PROJECT_REF" --yes SITE_URL="https://$HOST" ALLOWED_ORIGINS="$ORIGINS"
+          echo "The AI server now accepts requests from: $ORIGINS"

@@ -33,6 +33,18 @@ export function publicRpc(name: string, args: Record<string, unknown>): void {
 }
 
 let client: Promise<SupabaseClient> | null = null;
+const readyListeners = new Set<(c: Promise<SupabaseClient>) => void>();
+
+/** Calls back as soon as any part of the site loads Supabase (right away if it already has).
+ *  The sign-in state uses this, so logging in after moving between pages is noticed. */
+export function onSupabaseReady(cb: (c: Promise<SupabaseClient>) => void): () => void {
+  if (client) {
+    cb(client);
+    return () => {};
+  }
+  readyListeners.add(cb);
+  return () => readyListeners.delete(cb);
+}
 
 /** Loads the Supabase library only when an account feature is used. */
 export function getSupabase(): Promise<SupabaseClient> {
@@ -50,6 +62,9 @@ export function getSupabase(): Promise<SupabaseClient> {
         },
       }),
     );
+    const created = client;
+    readyListeners.forEach((cb) => cb(created));
+    readyListeners.clear();
   }
   return client;
 }

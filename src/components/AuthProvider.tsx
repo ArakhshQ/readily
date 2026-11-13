@@ -3,8 +3,8 @@
 // Signed-in state for the whole site. Supabase is loaded lazily, so visitors who
 // never sign in don't download it until it's needed.
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
-import { accountsEnabled, getSupabase } from "@/lib/supabase";
+import type { Session, SupabaseClient } from "@supabase/supabase-js";
+import { accountsEnabled, getSupabase, onSupabaseReady } from "@/lib/supabase";
 
 interface AuthState {
   enabled: boolean;
@@ -38,27 +38,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!accountsEnabled) return;
+    let cancelled = false;
+    let unsub: (() => void) | undefined;
+    const attach = (c: Promise<SupabaseClient>) =>
+      c
+        .then(async (sb) => {
+          if (cancelled || unsub) return;
+          // Listen first, so a sign-in that happens right now is never missed.
+          const sub = sb.auth.onAuthStateChange((event, s) => {
+            setSession(s);
+            setLoading(false);
+            if (event === "PASSWORD_RECOVERY") setRecovering(true);
+          });
+          unsub = () => sub.data.subscription.unsubscribe();
+          const { data } = await sb.auth.getSession();
+          if (!cancelled) {
+            setSession(data.session);
+            setLoading(false);
+          }
+        })
+        .catch(() => setLoading(false));
+
     const path = window.location.pathname;
     const accountPage = /^\/(login|signup|dashboard|forgot-password|reset-password|billing|admin)\/?/.test(path) || /access_token=/.test(window.location.hash);
-    // Most visitors never sign in: skip loading Supabase unless it's needed.
     if (!hasStoredSession() && !accountPage) {
+      // Most visitors never sign in: don't load Supabase until something on the page needs it,
+      // but start following the sign-in state the moment it does (for example on the login page).
       setLoading(false);
-      return;
+      const off = onSupabaseReady(attach);
+      return () => {
+        cancelled = true;
+        off();
+        unsub?.();
+      };
     }
-    let unsub: (() => void) | undefined;
-    getSupabase()
-      .then(async (sb) => {
-        const { data } = await sb.auth.getSession();
-        setSession(data.session);
-        setLoading(false);
-        const sub = sb.auth.onAuthStateChange((event, s) => {
-          setSession(s);
-          if (event === "PASSWORD_RECOVERY") setRecovering(true);
-        });
-        unsub = () => sub.data.subscription.unsubscribe();
-      })
-      .catch(() => setLoading(false));
-    return () => unsub?.();
+    attach(getSupabase());
+    return () => {
+      cancelled = true;
+      unsub?.();
+    };
   }, []);
 
   const signOut = useCallback(async () => {

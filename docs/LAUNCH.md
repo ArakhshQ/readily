@@ -44,8 +44,8 @@ npx supabase secrets set \
   ANTHROPIC_API_KEY=sk-ant-... \
   ELEVENLABS_API_KEY=... \
   REPLICATE_API_TOKEN=r8_... \
-  SITE_URL=https://readily-3zay.onrender.com \
-  ALLOWED_ORIGINS=https://readily-3zay.onrender.com
+  SITE_URL=https://readilytools.com \
+  ALLOWED_ORIGINS=https://readilytools.com
 ```
 
 ## 4. Deploy the AI and payment server
@@ -67,7 +67,7 @@ any PDF. It should take a few seconds and use 1 of your 20 trial credits.
    prices, the webhook and the customer portal, then prints one command:
 
    ```bash
-   STRIPE_SECRET_KEY=sk_test_... node scripts/stripe-setup.mjs https://YOUR_PROJECT_REF.supabase.co https://readily-3zay.onrender.com
+   STRIPE_SECRET_KEY=sk_test_... node scripts/stripe-setup.mjs https://YOUR_PROJECT_REF.supabase.co https://readilytools.com
    ```
 
 4. Paste the `npx supabase secrets set ...` command it printed.

@@ -76,7 +76,7 @@ returns bigint language sql immutable set search_path = '' as $$
     when 'premium' then 25::bigint * 1024 * 1024 * 1024
     when 'pro' then 10::bigint * 1024 * 1024 * 1024
     when 'basic' then 2::bigint * 1024 * 1024 * 1024
-    else 100::bigint * 1024 * 1024
+    else 20::bigint * 1024 * 1024
   end;
 $$;
 
