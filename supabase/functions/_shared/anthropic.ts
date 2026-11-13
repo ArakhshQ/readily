@@ -4,7 +4,7 @@ import { HttpError, env } from "./http.ts";
 export const MODEL_FAST = () => Deno.env.get("ANTHROPIC_MODEL_FAST") ?? "claude-haiku-5-5";
 export const MODEL_BEST = () => Deno.env.get("ANTHROPIC_MODEL_BEST") ?? "claude-sonnet-5-5";
 
-export async function claude(opts: { model: string; system: string; user: string; maxTokens: number; temperature?: number }): Promise<string> {
+export async function claude(opts: { model: string; system: string; user: string; maxTokens: number }): Promise<string> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -15,7 +15,6 @@ export async function claude(opts: { model: string; system: string; user: string
     body: JSON.stringify({
       model: opts.model,
       max_tokens: opts.maxTokens,
-      temperature: opts.temperature ?? 0.2,
       system: opts.system,
       messages: [{ role: "user", content: opts.user }],
     }),
@@ -23,7 +22,15 @@ export async function claude(opts: { model: string; system: string; user: string
   if (!res.ok) {
     const t = await res.text().catch(() => "");
     if (res.status === 429 || res.status === 529) throw new HttpError(503, "The AI is very busy right now. Try again in a minute.");
-    throw new HttpError(502, `The AI couldn't answer (${res.status}). ${t.slice(0, 200)}`);
+    // Show the provider's own one-line reason (not the raw JSON); the full reply goes to the server log.
+    console.error("anthropic", res.status, t.slice(0, 1000));
+    let reason = "";
+    try {
+      reason = JSON.parse(t)?.error?.message ?? "";
+    } catch {
+      reason = t.slice(0, 160);
+    }
+    throw new HttpError(502, `The AI couldn't answer (${res.status}).${reason ? ` ${reason}` : ""} Your credits were refunded.`);
   }
   const data = await res.json();
   const text = (data.content ?? []).filter((c: { type: string }) => c.type === "text").map((c: { text: string }) => c.text).join("");

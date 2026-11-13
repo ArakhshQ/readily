@@ -217,7 +217,7 @@ async function dispatch(user: User, slug: string, best: boolean, body: Body, inp
       const target = str(body.target, 40, "language");
       if (!/^[\p{L} ()\-]+$/u.test(target)) throw new HttpError(400, "Pick a language from the list.");
       const p = claudeApi.translatePrompt(String(body.text), target);
-      return { text: await claudeApi.claude({ model: best ? claudeApi.MODEL_BEST() : claudeApi.MODEL_FAST(), ...p, temperature: 0.1 }) };
+      return { text: await claudeApi.claude({ model: best ? claudeApi.MODEL_BEST() : claudeApi.MODEL_FAST(), ...p }) };
     }
     case "transcribe":
     case "auto-subtitles": {
@@ -276,7 +276,7 @@ async function runAssistant(user: User, plan: Plan, body: Body) {
     throw new HttpError(403, pro ? "You've used this month's commands. They refresh next month." : "You've used your 3 free tries. Upgrade to Pro to keep using commands.");
   }
   const p = claudeApi.assistantPrompt(text, files);
-  const raw = await claudeApi.claude({ model: claudeApi.MODEL_FAST(), ...p, temperature: 0 });
+  const raw = await claudeApi.claude({ model: claudeApi.MODEL_FAST(), ...p });
   let parsed: { steps?: unknown[]; reply?: string };
   try {
     parsed = JSON.parse(raw.replace(/^```(?:json)?|```$/g, "").trim());
