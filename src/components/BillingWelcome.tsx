@@ -1,6 +1,6 @@
 "use client";
 
-// Where Stripe sends people after paying. The plan switches on when Stripe's
+// Where Paddle sends people after paying. The plan switches on when Paddle's
 // webhook arrives (usually within seconds), so this page waits for it.
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";

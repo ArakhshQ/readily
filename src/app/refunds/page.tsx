@@ -12,7 +12,7 @@ export default function Refunds() {
   return (
     <div className="wrap narrow prose">
       <h1>Refund and Cancellation Policy</h1>
-      <p className="updated">Last updated November 9, 2026</p>
+      <p className="updated">Last updated November 16, 2026</p>
 
       <h2>Cancel any time</h2>
       <p>
@@ -52,7 +52,9 @@ export default function Refunds() {
         ) : (
           "Reply to your payment receipt email"
         )}
-        , and we&apos;ll answer within 2 working days. Refunds go back to the card you paid with and usually arrive within 5 to 10 days.
+        , and we&apos;ll answer within 2 working days. Plans are sold through Paddle, our reseller and merchant of record, so approved refunds
+        are paid by Paddle back to the card or PayPal account you used, and usually arrive within 5 to 10 days. You can also contact Paddle
+        directly through the link in your receipt email.
       </p>
     </div>
   );

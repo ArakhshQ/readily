@@ -1,14 +1,15 @@
 "use client";
 
 // The four plan cards with a monthly / yearly switch. With payments on, the buttons
-// go to Stripe Checkout; until then they join the waitlist.
+// open Paddle's checkout; until then they join the waitlist.
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "./AuthProvider";
 import { Check } from "./Icons";
 import { Message } from "./Message";
 import { paymentsEnabled, startCheckout, type Interval } from "@/lib/billing";
+import { loadPaddle } from "@/lib/paddle";
 import { PLANS, type PaidPlanId } from "@/lib/plans";
 
 const YEARLY_SAVING: Record<string, string> = { basic: "Save $10.88", pro: "Save $24.88", premium: "Save $60.88" };
@@ -28,9 +29,16 @@ export function PlanCards() {
       await startCheckout(id, interval);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Checkout couldn't open. Try again.");
+    } finally {
       setBusy(null);
     }
   }
+
+  // Paddle's own payment links (e.g. "update your card" emails) open this page with
+  // ?_ptxn=…; loading Paddle.js here opens that checkout automatically.
+  useEffect(() => {
+    if (params.get("_ptxn")) loadPaddle().catch((e) => setError(e instanceof Error ? e.message : String(e)));
+  }, [params]);
 
   return (
     <>

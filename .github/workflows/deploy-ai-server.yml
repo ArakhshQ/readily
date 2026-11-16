@@ -31,8 +31,10 @@ jobs:
         run: |
           supabase functions deploy ai --project-ref "$PROJECT_REF" --yes
           supabase functions deploy billing --project-ref "$PROJECT_REF" --yes
-          supabase functions deploy stripe-webhook --project-ref "$PROJECT_REF" --yes --no-verify-jwt
+          supabase functions deploy paddle-webhook --project-ref "$PROJECT_REF" --yes --no-verify-jwt
           supabase functions deploy health --project-ref "$PROJECT_REF" --yes --no-verify-jwt
+          # Payments moved from Stripe to Paddle: remove the old Stripe webhook if it is still there.
+          supabase functions delete stripe-webhook --project-ref "$PROJECT_REF" --yes 2>/dev/null || true
       - name: Tell the server where the website is
         run: |
           # The site's own address, with and without www, plus the old Render address so nothing breaks.

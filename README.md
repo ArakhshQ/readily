@@ -7,7 +7,7 @@ Free file tools that run entirely in the browser. Files are never uploaded.
 
 **Plans:** Free, Basic, Pro and Premium. Paid plans add higher-quality tools and AI paid for with monthly credits (waitlist until payments are connected).
 
-**Launch:** see [docs/LAUNCH.md](docs/LAUNCH.md) for the AI keys, Stripe and domain.
+**Launch:** see [docs/LAUNCH.md](docs/LAUNCH.md) for the AI keys and domain, and [docs/PADDLE.md](docs/PADDLE.md) for payments.
 
 **Accounts (optional):** sign up, log in, email verification, a dashboard with history and saved files, and plans. Powered by Supabase with emails sent through Brevo. Setup: [docs/ACCOUNTS-SETUP.md](docs/ACCOUNTS-SETUP.md).
 
@@ -44,7 +44,7 @@ src/lib/tools.ts    free tool catalog: names, SEO copy, FAQs, related tools
 src/lib/tools-pro.ts paid tools: plan level, engine, credits
 src/lib/plans.ts    plans, credits, allowances
 supabase/schema.sql database, credits, security rules
-supabase/functions/ AI server (ai), Stripe (billing, stripe-webhook), tests
+supabase/functions/ AI server (ai), Paddle payments (billing, paddle-webhook), health check, tests
 src/lib/pdf-ops.ts  images to PDF, merge, split
 src/lib/image-ops.ts compress to target size, resize, convert
 public/             icons, manifest, service worker

@@ -12,7 +12,7 @@ const PROCESSORS = [
   ["Render", "Hosts the website.", "United States"],
   ["Supabase", "Accounts, saved files, history, AI job records and temporary AI files.", "United States / your project's region"],
   ["Brevo", "Account emails such as sign-up confirmation and password resets.", "European Union"],
-  ["Stripe", "Payments, invoices and subscriptions. Readily never receives your card number.", "United States / worldwide"],
+  ["Paddle (Paddle.com Market Ltd)", "Our reseller and merchant of record: checkout, payments, sales tax and VAT, invoices and subscriptions. Readily never receives your card or PayPal details.", "United Kingdom / worldwide"],
   ["Anthropic (Claude)", "Text AI: summaries, questions about documents, translation and plain-words commands.", "United States"],
   ["ElevenLabs", "Voice AI: transcription, best-quality voice isolation, voiceover, voice changer and dubbing.", "United States / European Union"],
   ["Replicate", "GPU models: studio voice, photo upscaling, restoration, colorizing, photo editing, photo to video and video tools.", "United States"],
@@ -72,14 +72,16 @@ export default function Privacy() {
       <p>
         A file is only stored in your account when you press &ldquo;Save to my files&rdquo;. You can delete saved files, clear your history, or
         delete your whole account at any time from your dashboard. Deleting your account removes your saved files, history, AI job records and
-        profile. We keep payment records that the law requires (such as invoices) in Stripe.
+        profile. Payment records that the law requires (such as invoices) are kept by Paddle.
       </p>
 
       <h2>4. Payments</h2>
       <p>
-        Payments are handled by Stripe. Your card details go straight to Stripe and never reach Readily. We receive your subscription status,
-        plan, billing period and a customer reference so we can turn your plan on, and Stripe sends us notices when a payment succeeds, fails or a
-        plan changes.
+        Paid plans are sold through Paddle, our online reseller and merchant of record. You pay Paddle directly, by card or PayPal, in
+        Paddle&apos;s own secure checkout; your payment details never reach Readily. Paddle receives your email address, country and payment
+        details to take the payment and charge the right tax, under its own privacy policy. We receive your subscription status, plan, billing
+        period and a customer reference so we can turn your plan on, and Paddle sends us notices when a payment succeeds, fails or a plan
+        changes.
       </p>
 
       <h2>5. Who processes data for us</h2>
@@ -146,12 +148,21 @@ export default function Privacy() {
         See also our <Link href="/terms/">terms</Link> and <Link href="/refunds/">refund policy</Link>.
       </p>
 
-      {SITE.contactEmail && (
+      {(SITE.contactEmail || SITE.businessName) && (
         <>
           <h2>Contact</h2>
-          <p>
-            Questions about privacy: <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a>
-          </p>
+          {SITE.businessName && (
+            <p>
+              Readily is run by {SITE.businessName}
+              {SITE.businessAddress.length ? `, ${SITE.businessAddress.join(", ")}` : ""}, who is responsible for your data. See the{" "}
+              <Link href="/impressum/">Impressum</Link>.
+            </p>
+          )}
+          {SITE.contactEmail && (
+            <p>
+              Questions about privacy: <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a>
+            </p>
+          )}
         </>
       )}
     </div>

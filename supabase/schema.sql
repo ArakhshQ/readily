@@ -856,3 +856,104 @@ grant execute on function public.admin_feedback(text, integer) to authenticated;
 grant execute on function public.admin_resolve_feedback(uuid, boolean) to authenticated;
 grant execute on function public.admin_failed_jobs(integer, integer) to authenticated;
 grant execute on function public.admin_ai_health(integer) to authenticated;
+
+-- =========================================================== Paddle payments
+-- Paddle is the seller of record: it takes the payment, charges the right tax and
+-- tells Readily (through the paddle-webhook function) when a plan starts, renews or ends.
+alter table public.profiles add column if not exists paddle_customer_id text unique;
+alter table public.profiles add column if not exists paddle_subscription_id text;
+alter table public.profiles add column if not exists billing_event_at timestamptz;
+
+-- Each Paddle notification is applied once, even if Paddle sends it again.
+create table if not exists public.billing_events (
+  id text primary key,
+  type text not null,
+  created_at timestamptz not null default now()
+);
+alter table public.billing_events enable row level security;
+revoke all on public.billing_events from anon, authenticated;
+
+-- Applies a Paddle subscription to an account. Returns 'applied', or why it was skipped:
+--   'stale' - an older notification arriving after a newer one (Paddle doesn't promise order)
+--   'other' - about an old subscription while the account has a different live one
+create or replace function public.apply_paddle_subscription(
+  p_user uuid,
+  p_plan text,
+  p_interval text,
+  p_status text,
+  p_period_end timestamptz,
+  p_customer text,
+  p_subscription text,
+  p_cancel_at_end boolean,
+  p_new_period boolean,
+  p_event_at timestamptz
+)
+returns text
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  old public.profiles%rowtype;
+  -- past_due: a renewal failed and Paddle is retrying, so the plan stays on meanwhile.
+  active boolean := p_status in ('active', 'trialing', 'past_due');
+  new_plan text := case when active then p_plan else 'free' end;
+begin
+  select * into old from public.profiles where id = p_user for update;
+  if not found then
+    raise exception 'unknown user';
+  end if;
+  if old.billing_event_at is not null and p_event_at < old.billing_event_at then
+    return 'stale';
+  end if;
+  if old.paddle_subscription_id is not null and old.paddle_subscription_id <> p_subscription
+     and old.subscription_status in ('active', 'trialing', 'past_due') and not active then
+    return 'other';
+  end if;
+
+  update public.profiles set
+    plan = new_plan,
+    plan_interest = case when active then null else plan_interest end,
+    billing_interval = case when active then p_interval else billing_interval end,
+    subscription_status = p_status,
+    current_period_end = p_period_end,
+    paddle_customer_id = coalesce(p_customer, paddle_customer_id),
+    paddle_subscription_id = p_subscription,
+    cancel_at_period_end = coalesce(p_cancel_at_end, false),
+    billing_event_at = p_event_at
+  where id = p_user;
+
+  if not active then
+    if old.plan <> 'free' then
+      update public.profiles set credits = 0, credits_refresh_at = null where id = p_user;
+      insert into public.credit_events (user_id, delta, balance_after, reason)
+      values (p_user, -old.credits, 0, 'plan ended');
+    end if;
+  elsif p_status <> 'past_due' and (p_new_period or old.plan = 'free') then
+    -- New subscription or paid renewal: the full allowance for the plan.
+    update public.profiles
+    set credits = public.plan_credits(new_plan), credits_refresh_at = now() + interval '1 month'
+    where id = p_user;
+    insert into public.credit_events (user_id, delta, balance_after, reason)
+    values (p_user, public.plan_credits(new_plan) - old.credits, public.plan_credits(new_plan), 'plan ' || new_plan);
+  elsif old.plan <> new_plan then
+    -- Plan switched mid-month. Upgrade: add the extra allowance for the part of the month
+    -- that's left (so a last-day upgrade can't collect a whole month of credits).
+    -- Downgrade: never more than the new plan's allowance.
+    declare
+      left_frac numeric := greatest(0, least(1,
+        extract(epoch from (coalesce(old.credits_refresh_at, now() + interval '1 month') - now())) / extract(epoch from interval '30 days')));
+      new_credits integer := case
+        when public.plan_credits(new_plan) > public.plan_credits(old.plan)
+          then old.credits + round((public.plan_credits(new_plan) - public.plan_credits(old.plan)) * left_frac)::integer
+        else least(old.credits, public.plan_credits(new_plan))
+      end;
+    begin
+      update public.profiles set credits = new_credits where id = p_user;
+      insert into public.credit_events (user_id, delta, balance_after, reason)
+      values (p_user, new_credits - old.credits, new_credits, 'switched to ' || new_plan);
+    end;
+  end if;
+  return 'applied';
+end;
+$$;
+revoke all on function public.apply_paddle_subscription(uuid, text, text, text, timestamptz, text, text, boolean, boolean, timestamptz) from public, anon, authenticated;

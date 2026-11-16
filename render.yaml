@@ -17,8 +17,17 @@ services:
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
         sync: false
-      # Set to "true" once Stripe is connected (docs/LAUNCH.md). Until then paid plans collect a waitlist.
+      # Set to "true" once Paddle is set up (docs/PADDLE.md). Until then paid plans collect a waitlist.
       - key: NEXT_PUBLIC_PAYMENTS_ENABLED
+        sync: false
+      # Paddle's public client-side token (starts with live_). Not a secret.
+      - key: NEXT_PUBLIC_PADDLE_CLIENT_TOKEN
+        sync: false
+      # The business behind Readily, shown on the Impressum, terms and privacy pages.
+      # Address lines are separated with semicolons, e.g. "Musterstr. 1; 10115 Berlin; Germany".
+      - key: NEXT_PUBLIC_BUSINESS_NAME
+        sync: false
+      - key: NEXT_PUBLIC_BUSINESS_ADDRESS
         sync: false
       # Optional: shown on the contact, privacy and terms pages.
       - key: NEXT_PUBLIC_CONTACT_EMAIL
@@ -32,7 +41,7 @@ services:
         value: strict-origin-when-cross-origin
       - path: /*
         name: Permissions-Policy
-        value: camera=(), microphone=(), geolocation=(), payment=(self)
+        value: camera=(), microphone=(), geolocation=(), payment=(self "https://buy.paddle.com" "https://sandbox-buy.paddle.com")
       - path: /*
         name: X-Frame-Options
         value: SAMEORIGIN

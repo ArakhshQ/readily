@@ -7,7 +7,7 @@ export const state = {
   ai_jobs: [] as Row[],
   tool_trials: [] as Row[],
   credit_events: [] as Row[],
-  stripe_events: [] as Row[],
+  billing_events: [] as Row[],
   storage: new Map<string, Uint8Array>(),
   calls: [] as string[],
   replicateStatus: "processing" as string,
@@ -15,6 +15,7 @@ export const state = {
   anthropicBodies: [] as Row[],
   subscriptions: new Map<string, Row>(),
   rpcs: [] as { fn: string; args: Row }[],
+  paddleBodies: [] as { path: string; body: Row }[],
 };
 
 export function reset() {
@@ -22,7 +23,8 @@ export function reset() {
   state.ai_jobs = [];
   state.tool_trials = [];
   state.credit_events = [];
-  state.stripe_events = [];
+  state.billing_events = [];
+  state.paddleBodies = [];
   state.storage.clear();
   state.calls = [];
   state.replicateStatus = "processing";
@@ -73,18 +75,31 @@ function rpc(fn: string, a: Row): unknown {
       state.credit_events.push({ user_id: a.p_user, delta: a.p_amount, reason: a.p_reason });
       return p!.credits;
     }
-    case "set_subscription": {
-      const active = ["active", "trialing"].includes(String(a.p_status));
+    case "apply_paddle_subscription": {
+      // Mirrors public.apply_paddle_subscription in schema.sql.
+      const active = ["active", "trialing", "past_due"].includes(String(a.p_status));
       const newPlan = active ? String(a.p_plan) : "free";
+      if (p!.billing_event_at && String(a.p_event_at) < String(p!.billing_event_at)) return "stale";
+      if (p!.paddle_subscription_id && p!.paddle_subscription_id !== a.p_subscription && ["active", "trialing", "past_due"].includes(String(p!.subscription_status)) && !active) return "other";
       const changed = p!.plan !== newPlan;
+      const oldPlan = p!.plan;
       p!.plan = newPlan;
       p!.subscription_status = a.p_status;
-      p!.stripe_subscription_id = a.p_subscription;
-      p!.stripe_customer_id = a.p_customer ?? p!.stripe_customer_id;
+      p!.paddle_subscription_id = a.p_subscription;
+      p!.paddle_customer_id = a.p_customer ?? p!.paddle_customer_id;
       p!.cancel_at_period_end = a.p_cancel_at_end;
-      if (!active) p!.credits = 0;
-      else if (a.p_new_period || changed) p!.credits = PLAN_CREDITS[newPlan];
-      return null;
+      p!.billing_interval = active ? a.p_interval : p!.billing_interval;
+      p!.current_period_end = a.p_period_end;
+      p!.billing_event_at = a.p_event_at;
+      if (!active) {
+        if (oldPlan !== "free") p!.credits = 0;
+      } else if (a.p_status !== "past_due" && (a.p_new_period || oldPlan === "free")) p!.credits = PLAN_CREDITS[newPlan];
+      else if (changed) {
+        const left = p!.credits_refresh_at ? Math.max(0, Math.min(1, (Date.parse(String(p!.credits_refresh_at)) - Date.now()) / (30 * 86400e3))) : 1;
+        const up = PLAN_CREDITS[newPlan] > PLAN_CREDITS[String(oldPlan)];
+        p!.credits = up ? (p!.credits as number) + Math.round((PLAN_CREDITS[newPlan] - PLAN_CREDITS[String(oldPlan)]) * left) : Math.min(p!.credits as number, PLAN_CREDITS[newPlan]);
+      }
+      return "applied";
     }
   }
   throw new Error(`mock: unknown rpc ${fn}`);
@@ -110,7 +125,7 @@ export async function mockFetch(input: string | URL | Request, init: RequestInit
     if (rest) {
       if (rest[1]) {
         try {
-          return ok(rpc(rest[2], JSON.parse(await bodyText())));
+          return ok(JSON.stringify(rpc(rest[2], JSON.parse(await bodyText())) ?? null));
         } catch (e) {
           return ok({ message: (e as Error).message }, 400);
         }
@@ -120,7 +135,7 @@ export async function mockFetch(input: string | URL | Request, init: RequestInit
       if (method === "GET") return ok(filter(table, url.searchParams));
       if (method === "POST") {
         const row = JSON.parse(await bodyText());
-        if (rest[2] === "stripe_events" && table.some((r) => r.id === row.id)) return ok({ message: "duplicate key" }, 409);
+        if (rest[2] === "billing_events" && table.some((r) => r.id === row.id)) return ok({ message: "duplicate key" }, 409);
         const full = { id: row.id ?? crypto.randomUUID(), created_at: new Date().toISOString(), output: null, output_path: null, ...row };
         table.push(full);
         return ok([full], 201);
@@ -190,13 +205,16 @@ export async function mockFetch(input: string | URL | Request, init: RequestInit
     }
   }
   if (url.host === "replicate.delivery") return ok(new Uint8Array([137, 80, 78, 71]), 200, { "content-type": "image/png" });
-  if (url.host === "api.stripe.com") {
-    const body = new URLSearchParams(await bodyText());
-    if (url.pathname === "/v1/customers") return ok({ id: "cus_new" });
-    if (url.pathname === "/v1/checkout/sessions") return ok({ url: `https://checkout.stripe.test/s?price=${body.get("line_items[0][price]")}&user=${body.get("client_reference_id")}` });
-    if (url.pathname === "/v1/billing_portal/sessions") return ok({ url: `https://billing.stripe.test/p?flow=${body.get("flow_data[type]") ?? "none"}` });
-    const sub = url.pathname.match(/^\/v1\/subscriptions\/(\w+)$/);
-    if (sub) return ok(state.subscriptions.get(sub[1]) ?? {});
+  if (url.host === "api.paddle.com" || url.host === "sandbox-api.paddle.com") {
+    const auth = new Headers(init.headers).get("authorization") ?? "";
+    if (!auth.startsWith("Bearer pdl_")) return ok({ error: { code: "authentication_missing", detail: "bad key" } }, 401);
+    const body = method === "GET" ? {} : JSON.parse((await bodyText()) || "{}");
+    state.paddleBodies.push({ path: url.pathname, body });
+    const portal = url.pathname.match(/^\/customers\/(ctm_\w+)\/portal-sessions$/);
+    if (portal && method === "POST") return ok({ data: { id: "cpls_1", customer_id: portal[1], urls: { general: { overview: `https://customer-portal.paddle.test/${portal[1]}?subs=${(body.subscription_ids ?? []).join(",")}` }, subscriptions: [] } } }, 201);
+    const sub = url.pathname.match(/^\/subscriptions\/(sub_\w+)$/);
+    if (sub && method === "PATCH") return ok({ data: { id: sub[1], status: "active", items: (body.items ?? []).map((i: Row) => ({ price: { id: i.price_id } })) } });
+    if (sub) return state.subscriptions.has(sub[1]) ? ok({ data: state.subscriptions.get(sub[1]) }) : ok({ error: { code: "not_found", detail: "Subscription not found" } }, 404);
   }
   throw new Error(`mock: unexpected request ${method} ${url.href}`);
 }
@@ -225,13 +243,15 @@ export function setEnv() {
     ANTHROPIC_API_KEY: "a",
     ELEVENLABS_API_KEY: "e",
     REPLICATE_API_TOKEN: "r",
-    STRIPE_SECRET_KEY: "sk_test",
-    STRIPE_WEBHOOK_SECRET: "whsec_test",
+    PADDLE_API_KEY: "pdl_live_apikey_test",
+    PADDLE_WEBHOOK_SECRET: "pdl_ntfset_secret",
     SITE_URL: "https://readily.test",
-    STRIPE_PRICE_BASIC_MONTH: "price_basic_m",
-    STRIPE_PRICE_PRO_MONTH: "price_pro_m",
-    STRIPE_PRICE_PRO_YEAR: "price_pro_y",
-    STRIPE_PRICE_PREMIUM_MONTH: "price_prem_m",
+    PADDLE_PRICE_BASIC_MONTH: "pri_basic_m",
+    PADDLE_PRICE_BASIC_YEAR: "pri_basic_y",
+    PADDLE_PRICE_PRO_MONTH: "pri_pro_m",
+    PADDLE_PRICE_PRO_YEAR: "pri_pro_y",
+    PADDLE_PRICE_PREMIUM_MONTH: "pri_prem_m",
+    PADDLE_PRICE_PREMIUM_YEAR: "pri_prem_y",
   })) Deno.env.set(k, v);
   globalThis.fetch = mockFetch as typeof fetch;
 }

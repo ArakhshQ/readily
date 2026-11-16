@@ -35,7 +35,7 @@ const FAQ = [
   },
   {
     q: "How do I pay?",
-    a: "By card through Stripe, monthly or yearly. Readily never sees or stores your card number. You can change plan, update your card, download invoices or cancel any time from your dashboard.",
+    a: "By card or PayPal, monthly or yearly, through Paddle, our reseller and merchant of record. Paddle takes the payment and adds sales tax or VAT where required; Readily never sees your card or PayPal details. You can switch plan from this page, and update your payment method, see invoices or cancel any time from Manage billing on your dashboard.",
   },
   {
     q: "Can I get a refund?",

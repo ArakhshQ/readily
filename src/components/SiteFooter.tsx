@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "./Icons";
 import { FooterFeedback } from "./Feedback";
+import { SITE } from "@/lib/site";
 import { CATEGORIES, TOOLS } from "@/lib/tools";
 
 export function SiteFooter() {
@@ -50,6 +51,11 @@ export function SiteFooter() {
               <li>
                 <Link href="/refunds/">Refunds</Link>
               </li>
+              {SITE.businessName && (
+                <li>
+                  <Link href="/impressum/">Impressum</Link>
+                </li>
+              )}
               <li>
                 <FooterFeedback />
               </li>

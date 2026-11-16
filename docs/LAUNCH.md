@@ -2,8 +2,7 @@
 
 The website, the 20 free tools and the on-device Basic tools work as soon as Render
 deploys. The AI tools and payments need a few accounts and keys. Do these steps in
-order; each one takes 5 to 15 minutes. Use Stripe **test mode** first, then switch to
-live at the end.
+order; each one takes 5 to 15 minutes.
 
 You'll run a few commands in a terminal on your computer, inside the `readily` folder
 (`git clone https://github.com/ArakhshQ/readily && cd readily && npm install`).
@@ -15,7 +14,7 @@ You'll run a few commands in a terminal on your computer, inside the `readily` f
 Supabase > **SQL Editor** > New query > paste all of `supabase/schema.sql` > **Run**.
 
 It's safe to run again. It adds AI credits (every existing account gets its 20 trial
-credits), the AI job log, free-try tracking, Stripe fields and two private storage
+credits), the AI job log, free-try tracking, Paddle billing fields and two private storage
 buckets for AI files.
 
 ## 2. Connect the Supabase command line
@@ -53,42 +52,23 @@ npx supabase secrets set \
 ```bash
 npx supabase functions deploy ai
 npx supabase functions deploy billing
-npx supabase functions deploy stripe-webhook --no-verify-jwt
+npx supabase functions deploy paddle-webhook --no-verify-jwt
 ```
 
 Check it: log in on the site with a free account, open **Summarize PDF**, and summarize
 any PDF. It should take a few seconds and use 1 of your 20 trial credits.
 
-## 5. Connect Stripe (test mode first)
+## 5. Payments (Paddle)
 
-1. Create a Stripe account at stripe.com. Stay in **Test mode** (toggle at the top).
-2. Developers > API keys: copy the **Secret key** (`sk_test_...`).
-3. Run the setup script. It creates Basic, Pro and Premium with monthly and yearly
-   prices, the webhook and the customer portal, then prints one command:
-
-   ```bash
-   STRIPE_SECRET_KEY=sk_test_... node scripts/stripe-setup.mjs https://YOUR_PROJECT_REF.supabase.co https://readilytools.com
-   ```
-
-4. Paste the `npx supabase secrets set ...` command it printed.
-5. Render > your site > **Environment**: set `NEXT_PUBLIC_PAYMENTS_ENABLED` to `true`,
-   then **Save, rebuild, and deploy**.
-6. Test: on the live site, click **Get Pro** and pay with card `4242 4242 4242 4242`,
-   any future date and any CVC. You should land on "Welcome to Pro", and your
-   dashboard should show 700 credits. Then try **Manage billing** > cancel.
-
-### Going live
-
-When you're ready to take real payments: in Stripe, complete **Activate account**
-(business details and bank account), switch off Test mode, copy the live secret key
-(`sk_live_...`) and run steps 3 and 4 again with it. Stripe can also collect sales
-tax/VAT for you: Settings > Tax, then add `STRIPE_AUTOMATIC_TAX=true` to the secrets.
+Paid plans are sold through Paddle, Readily's reseller and merchant of record. Follow
+**docs/PADDLE.md** step by step: business registration, Paddle account, Impressum details, keys,
+the "Set up Paddle" workflow, and one real test purchase.
 
 ## 6. Contact email
 
 Render > Environment: set `NEXT_PUBLIC_CONTACT_EMAIL` (for example
 `hello@yourdomain.com`). It appears on the privacy, terms and refund pages, which
-Stripe and app stores expect. Redeploy.
+Paddle and app stores expect. Redeploy.
 
 ## 6b. Your admin page
 
@@ -114,7 +94,6 @@ that send Do Not Track.
 3. Supabase > Authentication > URL Configuration: set Site URL to the new domain and
    add `https://yourdomain.com/**` to Redirect URLs.
 4. Update the secrets: `npx supabase secrets set SITE_URL=https://yourdomain.com ALLOWED_ORIGINS=https://yourdomain.com`.
-5. In Stripe's customer portal settings, update the privacy and terms links.
 6. Brevo: verify the domain (SPF and DKIM) and send from `hello@yourdomain.com`.
 7. Google Search Console: add the domain, then submit `https://yourdomain.com/sitemap.xml`.
    Do the same in Bing Webmaster Tools.
@@ -127,7 +106,7 @@ that send Do Not Track.
 - [ ] Spending limits set in Anthropic, ElevenLabs and Replicate.
 - [ ] Ask a lawyer to review the privacy policy, terms and refund policy and add your
       business name and address.
-- [ ] Stripe in live mode, `NEXT_PUBLIC_PAYMENTS_ENABLED=true`.
+- [ ] Paddle approved and set up (docs/PADDLE.md), `NEXT_PUBLIC_PAYMENTS_ENABLED=true`.
 - [ ] Domain, Search Console and Brevo domain verified.
 
 ---
@@ -138,8 +117,8 @@ that send Do Not Track.
 - **Supabase**: accounts, database, private storage, and three edge functions:
   - `ai`: checks the plan and free tries, measures the real file length, takes credits,
     runs the AI, stores the result privately for 24 hours, refunds credits on failure.
-  - `billing`: opens Stripe Checkout or the customer portal.
-  - `stripe-webhook`: the only thing that changes a plan or adds monthly credits.
+  - `billing`: prepares Paddle's checkout, switches plans, or opens Paddle's customer portal.
+  - `paddle-webhook`: the only thing that changes a plan or adds monthly credits.
 - **Prices** live in `src/lib/tools-pro.ts` (website) and
   `supabase/functions/_shared/tools.ts` (server). The build fails if they disagree.
 

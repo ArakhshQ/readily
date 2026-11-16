@@ -12,7 +12,7 @@ export default function Terms() {
   return (
     <div className="wrap narrow prose">
       <h1>Terms of Service</h1>
-      <p className="updated">Last updated November 9, 2026</p>
+      <p className="updated">Last updated November 16, 2026</p>
       <p>
         These terms apply when you use Readily, its free tools, an account or a paid plan. By using Readily you agree to them. If you don&apos;t
         agree, please don&apos;t use the service.
@@ -33,14 +33,24 @@ export default function Terms() {
 
       <h2>3. Paid plans and billing</h2>
       <ul>
-        <li>Plans are billed in advance, monthly or yearly, through Stripe, and renew automatically until you cancel.</li>
-        <li>Prices are shown in US dollars. Sales tax or VAT may be added where required.</li>
+        <li>
+          Our order process is conducted by our online reseller Paddle.com. Paddle.com is the Merchant of Record for all our orders. Paddle
+          provides all customer service inquiries and handles returns. Paddle&apos;s buyer terms also apply to your purchase.
+        </li>
+        <li>Plans are billed in advance, monthly or yearly, and renew automatically until you cancel. You can pay by card or PayPal.</li>
+        <li>Prices are shown in US dollars. Paddle adds sales tax or VAT where required.</li>
         <li>
           You can cancel at any time from your dashboard (&ldquo;Manage billing&rdquo;). You keep your plan until the end of the period you&apos;ve
           paid for, and it isn&apos;t renewed after that.
         </li>
-        <li>If you change plan, Stripe works out the difference for the rest of the period, and your credits switch to the new plan&apos;s amount.</li>
-        <li>If a payment fails, we&apos;ll try again and let you know; if it still can&apos;t be collected, your account moves to the Free plan.</li>
+        <li>
+          If you change plan, Paddle charges or credits the difference for the rest of the period. When you upgrade, you get the extra AI
+          credits for the rest of the month; when you downgrade, your credits are capped at the new plan&apos;s amount.
+        </li>
+        <li>
+          If a renewal payment fails, Paddle tries again for a while and you keep your plan meanwhile; if it still can&apos;t be collected, your
+          account moves to the Free plan.
+        </li>
         <li>We&apos;ll tell you at least 30 days before any price change, and it applies from your next renewal.</li>
         <li>
           Refunds are covered by our <Link href="/refunds/">refund policy</Link>.
@@ -107,12 +117,20 @@ export default function Terms() {
       <h2>11. Changes</h2>
       <p>We may update these terms. For important changes we&apos;ll tell account holders by email before they take effect.</p>
 
-      {SITE.contactEmail && (
+      {(SITE.contactEmail || SITE.businessName) && (
         <>
           <h2>Contact</h2>
-          <p>
-            <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a>
-          </p>
+          {SITE.businessName && (
+            <p>
+              Readily is run by {SITE.businessName}
+              {SITE.businessAddress.length ? `, ${SITE.businessAddress.join(", ")}` : ""}. See the <Link href="/impressum/">Impressum</Link>.
+            </p>
+          )}
+          {SITE.contactEmail && (
+            <p>
+              <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a>
+            </p>
+          )}
         </>
       )}
     </div>

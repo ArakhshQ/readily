@@ -1,8 +1,8 @@
 # Supabase CLI settings for Readily's edge functions (see docs/LAUNCH.md).
 project_id = "readily"
 
-# Stripe signs its webhook requests, so that function skips the usual login check.
-[functions.stripe-webhook]
+# Paddle signs its webhook requests, so that function skips the usual login check.
+[functions.paddle-webhook]
 verify_jwt = false
 
 # Uptime monitors call the health check without logging in.
