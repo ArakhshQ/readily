@@ -3,15 +3,15 @@ import Link from "next/link";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Terms of service",
-  description: "The terms for using Readily's free tools, accounts, paid plans, AI credits and AI tools.",
+  title: "Terms of Service",
+  description: "The terms for using Readily: free online file tools, accounts, paid plans and subscriptions, AI credits, AI tools and acceptable use.",
   alternates: { canonical: "/terms/" },
 };
 
 export default function Terms() {
   return (
     <div className="wrap narrow prose">
-      <h1>Terms of service</h1>
+      <h1>Terms of Service</h1>
       <p className="updated">Last updated November 9, 2026</p>
       <p>
         These terms apply when you use Readily, its free tools, an account or a paid plan. By using Readily you agree to them. If you don&apos;t

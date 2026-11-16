@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { LoginForm } from "@/components/auth/LoginForm";
 
 export const metadata: Metadata = {
-  title: "Log in",
+  title: "Log In",
   description: "Log in to your Readily dashboard.",
   alternates: { canonical: "/login/" },
   robots: { index: false },

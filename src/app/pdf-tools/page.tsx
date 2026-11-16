@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { CategoryPage } from "@/components/CategoryPage";
 
 export const metadata: Metadata = {
-  title: "PDF tools: free and private",
-  description: "Free PDF tools that run in your browser: images to PDF, merge, split, compress, organize, number, watermark and sign PDFs. No upload.",
+  title: { absolute: "Free PDF Tools Online – Merge, Compress, Convert, Sign" },
+  description: "Free online PDF tools: merge PDF, split PDF, compress PDF, PDF to JPG, JPG to PDF, organize, number, watermark and sign PDFs. No upload, no sign-up.",
   alternates: { canonical: "/pdf-tools/" },
 };
 
 export default function Page() {
-  return <CategoryPage id="pdf" intro="Build, combine, edit and sign PDFs." />;
+  return <CategoryPage heading="Free Online PDF Tools" id="pdf" intro="Build, combine, edit and sign PDFs." />;
 }

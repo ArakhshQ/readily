@@ -7,11 +7,11 @@ import { paymentsEnabled } from "@/lib/billing";
 import { PAID_TOOLS, PLANS, PLAN_BY_ID, allowance, type Level } from "@/lib/plans";
 
 export const metadata: Metadata = {
-  title: "Pricing",
+  title: "Pricing – Free, Basic, Pro and Premium Plans",
   description:
     "Readily's 20 everyday file tools are free. Basic, Pro and Premium add pro-quality tools and AI for voice, photos, video and documents.",
   alternates: { canonical: "/pricing/" },
-  openGraph: { url: "/pricing/", title: "Readily plans: Free, Basic, Pro and Premium" },
+  openGraph: { url: "/pricing/", title: "Readily Pricing – Free, Basic, Pro and Premium Plans" },
 };
 
 const LEVELS: { level: Level; name: string; note: string }[] = [
@@ -73,7 +73,7 @@ export default function Pricing() {
     <div className="wrap pricing">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="pricing-head">
-        <h1>Everyday tools are free. Pay for pro results.</h1>
+        <h1>Everyday Tools Are Free. Pay for Pro Results.</h1>
         <p>
           All 20 everyday tools stay free for everyone. Plans add higher-quality tools and AI for voice, photos, video and documents.
         </p>

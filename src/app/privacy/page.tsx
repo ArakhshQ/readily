@@ -3,7 +3,7 @@ import Link from "next/link";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Privacy policy",
+  title: "Privacy Policy",
   description: "How Readily handles your files and data. Most tools run on your device and never upload your files; AI tools process files privately and delete them within 24 hours.",
   alternates: { canonical: "/privacy/" },
 };
@@ -21,7 +21,7 @@ const PROCESSORS = [
 export default function Privacy() {
   return (
     <div className="wrap narrow prose">
-      <h1>Privacy policy</h1>
+      <h1>Privacy Policy</h1>
       <p className="updated">Last updated November 9, 2026</p>
       <p>
         This policy explains what Readily (&ldquo;we&rdquo;) collects, why, and the choices you have. In short: most tools never upload your

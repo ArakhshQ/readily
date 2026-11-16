@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { BillingWelcome } from "@/components/BillingWelcome";
 
 export const metadata: Metadata = {
-  title: "Welcome to your plan",
+  title: "Welcome to Your Plan",
   robots: { index: false },
   alternates: { canonical: "/billing/" },
 };

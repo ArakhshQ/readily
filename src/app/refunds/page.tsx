@@ -3,15 +3,15 @@ import Link from "next/link";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Refund and cancellation policy",
-  description: "How to cancel a Readily plan and when you can get a refund.",
+  title: "Refund and Cancellation Policy",
+  description: "How to cancel a Readily Basic, Pro or Premium plan, what happens to your credits, and when you can get a refund for a subscription payment.",
   alternates: { canonical: "/refunds/" },
 };
 
 export default function Refunds() {
   return (
     <div className="wrap narrow prose">
-      <h1>Refund and cancellation policy</h1>
+      <h1>Refund and Cancellation Policy</h1>
       <p className="updated">Last updated November 9, 2026</p>
 
       <h2>Cancel any time</h2>

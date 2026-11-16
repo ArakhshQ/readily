@@ -270,7 +270,14 @@ img {
   align-items: center;
 }
 .hero h1 {
-  max-width: 12ch;
+  max-width: 17ch;
+  font-size: clamp(36px, 5.2vw, 60px);
+}
+.hero-kicker {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--cobalt);
+  margin-bottom: 12px;
 }
 .hero-lead {
   margin-top: 20px;

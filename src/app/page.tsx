@@ -9,7 +9,10 @@ import { TOOLS, TOOL_BY_SLUG } from "@/lib/tools";
 const FREE = TOOLS.filter((t) => !t.level).length;
 const AI_PICKS = ["noise-remover", "remove-background", "transcribe", "studio-voice", "translate-document", "restore-photo", "ai-dubbing", "ai-photo-editor"] as const;
 
-export const metadata: Metadata = { alternates: { canonical: "/" } };
+export const metadata: Metadata = {
+  title: { absolute: "Readily – Free Online PDF, Image, Video and Audio Tools" },
+  alternates: { canonical: "/" },
+};
 
 export default function Home() {
   return (
@@ -17,7 +20,8 @@ export default function Home() {
       <section className="hero">
         <div className="wrap">
           <div>
-            <h1>Get any file ready for wherever it&apos;s going.</h1>
+            <p className="hero-kicker">Get any file ready for wherever it&apos;s going.</p>
+            <h1>Free Online Tools for PDF, Images, Video and Audio</h1>
             <p className="hero-lead">
               {FREE} free tools for PDFs, images, video and audio, plus AI tools for voice, photos and documents. Shrink a photo to the size a form asks for, sign a PDF, or clean up a recording.
             </p>

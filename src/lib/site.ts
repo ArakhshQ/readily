@@ -4,7 +4,7 @@ export const SITE = {
   tagline: "Get any file ready for wherever it's going.",
   url: (process.env.NEXT_PUBLIC_SITE_URL || "https://readilytools.com").replace(/\/$/, ""),
   description:
-    "Free file tools that run in your browser. Turn photos into a PDF, merge and split PDFs, and compress, resize or convert images to an exact size. No upload, no signup.",
+    "Free online tools to merge, compress and convert PDFs, compress and resize images, and convert video and audio. Runs in your browser: no upload, no sign-up.",
   // Shown on the about/privacy/terms pages only when set (NEXT_PUBLIC_CONTACT_EMAIL on Render).
   contactEmail: process.env.NEXT_PUBLIC_CONTACT_EMAIL || "",
 };

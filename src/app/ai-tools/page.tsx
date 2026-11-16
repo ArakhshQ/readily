@@ -6,9 +6,9 @@ import { SITE } from "@/lib/site";
 import { TOOLS } from "@/lib/tools";
 
 export const metadata: Metadata = {
-  title: "AI tools for voice, photos, video and documents",
+  title: { absolute: "AI Tools – Voice Enhancer, Subtitles, Photo Restore, Dubbing" },
   description:
-    "Readily's AI tools: remove background noise, enhance voice, transcribe, add subtitles, summarize and translate PDFs, remove backgrounds, restore and upscale photos, dub videos and more. Try each one free.",
+    "AI tools to remove background noise, enhance voice, transcribe, add subtitles, summarize and translate PDFs, restore photos and dub videos. Free tries included.",
   alternates: { canonical: "/ai-tools/" },
   openGraph: { url: "/ai-tools/", images: [{ url: "/og/ai-tools.png", width: 1200, height: 630 }] },
 };
@@ -31,7 +31,7 @@ export default function AiTools() {
     <div className="wrap">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="pricing-head" style={{ paddingTop: "clamp(40px, 6vw, 72px)" }}>
-        <h1>AI tools that do the hard part</h1>
+        <h1>AI Tools for Voice, Photos, Video and Documents</h1>
         <p>
           Clean up a voice, cut out a photo, transcribe a lecture, translate a contract or dub a video. Sign up free to try each Basic and Pro tool
           once, then pick the <Link href="/pricing/">plan</Link> that fits.

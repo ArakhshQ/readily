@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { Dashboard } from "@/components/dashboard/Dashboard";
 
 export const metadata: Metadata = {
-  title: "Your dashboard",
+  title: "Your Dashboard",
   robots: { index: false },
 };
 

@@ -3,8 +3,8 @@ import Link from "next/link";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "About",
-  description: "Why Readily exists: fast, private file tools for forms, applications and everyday uploads.",
+  title: { absolute: "About Readily – Free, Private File Tools" },
+  description: "About Readily: free, fast and private online tools for PDFs, images, video and audio. Most tools run in your browser, so your files never leave your device.",
   alternates: { canonical: "/about/" },
 };
 
