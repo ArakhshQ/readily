@@ -9,6 +9,7 @@ import { Message } from "./Message";
 import { downloadBlob, zipOutputs, type Output } from "@/lib/files";
 import { blobToFile, setHandoff } from "@/lib/handoff";
 import { TOOL_BY_SLUG, type ToolSlug } from "@/lib/tools";
+import { useEmbed } from "@/lib/embed";
 
 interface Props {
   /** The tool that made these results, for history and saved files. */
@@ -31,12 +32,22 @@ export function ResultPanel({ tool, outputs, zipName, next, onRestart }: Props) 
   const ref = useRef<HTMLDivElement>(null);
   const [zipping, setZipping] = useState(false);
   const [copied, setCopied] = useState(false);
+  const embed = useEmbed();
+  const handed = useRef(false);
+  const server = TOOL_BY_SLUG[tool]?.engine === "server";
 
   useEffect(() => {
     ref.current?.focus();
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     window.dispatchEvent(new CustomEvent("readily:result", { detail: { tool } }));
   }, [tool]);
+
+  // Inside the Workspace: offer the result back so it becomes the next version of the file.
+  useEffect(() => {
+    if (!embed || handed.current) return;
+    handed.current = true;
+    embed.onResult(tool, outputs);
+  }, [embed, tool, outputs]);
 
   // Signed-in users get a history entry: names and sizes only, never the files.
   useEffect(() => {
@@ -83,7 +94,7 @@ export function ResultPanel({ tool, outputs, zipName, next, onRestart }: Props) 
         </span>
         <div>
           <h2>{many ? `${outputs.length} files ready` : "Your file is ready"}</h2>
-          <p>Made on your device. Nothing was uploaded.</p>
+          <p>{server ? "Made by Readily's AI. Your upload is deleted within 24 hours." : "Made on your device. Nothing was uploaded."}</p>
         </div>
       </div>
       <ul className="result-files">
@@ -150,11 +161,17 @@ export function ResultPanel({ tool, outputs, zipName, next, onRestart }: Props) 
             <Cloud size={16} /> <Link href="/signup/">Sign up free</Link> to save results and see your history on any device.
           </p>
         )}
-        <button type="button" className="btn btn-secondary" onClick={onRestart}>
-          <Refresh size={18} />
-          Start over
-        </button>
-        {next.length > 0 && (
+        {embed ? (
+          <button type="button" className="btn btn-secondary" onClick={embed.onBack}>
+            Back to your file
+          </button>
+        ) : (
+          <button type="button" className="btn btn-secondary" onClick={onRestart}>
+            <Refresh size={18} />
+            Start over
+          </button>
+        )}
+        {!embed && next.length > 0 && (
           <>
             <span className="next-label">Keep going with {many ? "these files" : "this file"}</span>
             {next.map((slug) => (

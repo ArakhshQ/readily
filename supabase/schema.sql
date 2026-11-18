@@ -957,3 +957,8 @@ begin
 end;
 $$;
 revoke all on function public.apply_paddle_subscription(uuid, text, text, text, timestamptz, text, text, boolean, boolean, timestamptz) from public, anon, authenticated;
+
+-- =========================================================== consent record
+-- Voice and face AI tools (dubbing, voice changer, photo to video, photo editor, video
+-- background remover) only run after the user confirms they have permission; this is when.
+alter table public.ai_jobs add column if not exists consent_at timestamptz;

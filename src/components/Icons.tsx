@@ -166,6 +166,45 @@ export const FileIcon = (p: P) => (
 );
 
 const glyphs: Record<ToolSlug, (p: P) => React.ReactElement> = {
+  "add-text-to-image": (p) => (
+    <Svg {...p}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M8 9h8M12 9v7" />
+    </Svg>
+  ),
+  "resize-video": (p) => (
+    <Svg {...p}>
+      <rect x="7" y="2" width="10" height="20" rx="2" />
+      <path d="M10.5 9.5v5l4-2.5z" />
+    </Svg>
+  ),
+  "merge-videos": (p) => (
+    <Svg {...p}>
+      <rect x="2" y="6" width="8" height="12" rx="1.5" />
+      <rect x="14" y="6" width="8" height="12" rx="1.5" />
+      <path d="M10 12h4" />
+    </Svg>
+  ),
+  "grammar-checker": (p) => (
+    <Svg {...p}>
+      <path d="M4 18l4-12 4 12M5.5 14h5" />
+      <path d="M14 15l2.5 2.5L21 12" />
+    </Svg>
+  ),
+  paraphraser: (p) => (
+    <Svg {...p}>
+      <path d="M4 7h10M4 11h7M4 15h5" />
+      <path d="M20 13a5 5 0 0 1-8.5 3.5M12 19v-2.5h2.5M13 9a5 5 0 0 1 7 1.5" />
+    </Svg>
+  ),
+  "vocal-remover": (p) => (
+    <Svg {...p}>
+      <path d="M9 18V6l10-2v12" />
+      <circle cx="6.5" cy="18" r="2.5" />
+      <circle cx="16.5" cy="16" r="2.5" />
+      <path d="M3 3l18 18" />
+    </Svg>
+  ),
   "jpg-to-pdf": (p) => (
     <Svg {...p}>
       <rect x="3" y="4" width="11" height="9" rx="1.5" />

@@ -12,7 +12,7 @@ export default function Terms() {
   return (
     <div className="wrap narrow prose">
       <h1>Terms of Service</h1>
-      <p className="updated">Last updated November 16, 2026</p>
+      <p className="updated">Last updated November 18, 2026</p>
       <p>
         These terms apply when you use Readily, its free tools, an account or a paid plan. By using Readily you agree to them. If you don&apos;t
         agree, please don&apos;t use the service.
@@ -84,8 +84,10 @@ export default function Terms() {
         <li>break the law, or try to get around plan limits, credits, security or other people&apos;s accounts.</li>
       </ul>
       <p>
-        AI providers we use also have their own usage rules, which apply to content made with their models. We may stop a job, remove content or
-        suspend an account that breaks these rules.
+        Tools that work with a person&apos;s voice or appearance (AI dubbing, voice changer, photo to video, AI photo editor and video background
+        remover) ask you to confirm each time that you own the content or have permission from the people in it, and we keep a record of that
+        confirmation. AI providers we use also have their own usage rules, which apply to content made with their models. We may stop a job,
+        remove content or suspend an account that breaks these rules.
       </p>
 
       <h2>7. AI results</h2>

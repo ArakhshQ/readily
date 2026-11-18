@@ -12,7 +12,7 @@ const PLAN_PRICE: Record<number, string> = { 1: "4.99", 2: "11.99", 3: "29.99" }
 
 const SERVER_NOTE: Partial<Record<string, string>> = {
   pdf: "Only the document's text is sent to Readily's AI, processed privately and never used for training.",
-  text: "Your script is processed privately by Readily's AI and never used for training.",
+  text: "Your text is processed privately by Readily's AI and never used for training.",
   any: "Only your instruction and file names go to the AI. Your files are processed on your device.",
 };
 

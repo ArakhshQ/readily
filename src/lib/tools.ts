@@ -23,6 +23,9 @@ export type ToolSlug =
   | "video-to-mp3"
   | "convert-audio"
   | "trim-audio"
+  | "add-text-to-image"
+  | "resize-video"
+  | "merge-videos"
   // Paid tools (tools-pro.ts)
   | "noise-remover"
   | "remove-background"
@@ -50,9 +53,12 @@ export type ToolSlug =
   | "video-upscaler"
   | "photo-to-video"
   | "ai-photo-editor"
-  | "product-photo-backgrounds";
+  | "product-photo-backgrounds"
+  | "grammar-checker"
+  | "paraphraser"
+  | "vocal-remover";
 
-export type Category = "pdf" | "image" | "video" | "audio";
+export type Category = "pdf" | "image" | "video" | "audio" | "text";
 
 /** What kind of file a tool takes in. */
 export type InputKind = "image" | "pdf" | "image-pdf" | "heic" | "video" | "audio" | "media" | "text" | "any";
@@ -99,6 +105,8 @@ export interface Tool {
   /** Capped per month instead of charged credits. */
   capped?: boolean;
   /** A higher-quality mode only on Premium. */
+  /** Required "I have permission" checkbox (voice and face AI tools); the server records it. */
+  consent?: string;
   premiumOption?: { name: string; credits: number; what: string };
 }
 
@@ -576,6 +584,29 @@ const FREE_TOOLS: Tool[] = [
     ],
   },
   {
+    slug: "add-text-to-image",
+    name: "Add text to image",
+    short: "Put words on a photo",
+    title: "Add Text to Image",
+    promise: "Write a caption, title or label on any photo. Pick the font, size and colour, then drag it where you want it.",
+    seoTitle: "Add Text to Image Online – Free Photo Text Editor",
+    seoDescription:
+      "Add text to photos for free: captions, titles, quotes and labels. Choose font, size, colour, outline or background, drag to place it, download. No upload.",
+    category: "image",
+    input: "image",
+    isNew: true,
+    keywords: ["add text to image", "add text to photo", "write on picture", "caption photo", "text on image", "photo text editor", "meme maker", "put words on photo", "text overlay"],
+    accept: IMAGE_ACCEPT,
+    acceptLabel: "one JPG, PNG or WebP image",
+    multiple: false,
+    related: ["crop-image", "resize-image", "compress-image"],
+    faq: [
+      { q: "How do I move the text?", a: "Drag it on the preview, or use the Top, Middle and Bottom buttons." },
+      { q: "Does it lower the quality of my photo?", a: "No. The text is drawn onto the photo at its full original resolution." },
+      { q: "Is my image uploaded?", a: "No. Everything happens in your browser." },
+    ],
+  },
+  {
     slug: "image-to-text",
     name: "Image to text",
     short: "Copy text out of a photo or scan (OCR)",
@@ -669,6 +700,52 @@ const FREE_TOOLS: Tool[] = [
         q: "Is my video uploaded?",
         a: "No. Everything happens in your browser.",
       },
+    ],
+  },
+  {
+    slug: "resize-video",
+    name: "Resize video for social media",
+    short: "Make a video fit Reels, TikTok or a square post",
+    title: "Resize Video for Instagram, TikTok and YouTube",
+    promise: "Turn any video into vertical 9:16, square 1:1, portrait 4:5 or wide 16:9, with a blurred background, black bars or a crop.",
+    seoTitle: "Resize Video for Instagram Reels, TikTok and Shorts – Free",
+    seoDescription:
+      "Resize videos to 9:16, 1:1, 4:5 or 16:9 for Reels, TikTok, Shorts and YouTube for free. Blurred background, bars or crop. Runs in your browser, no upload.",
+    category: "video",
+    input: "video",
+    isNew: true,
+    keywords: ["resize video", "video resizer", "9:16 video", "resize video for instagram", "resize video for tiktok", "vertical video", "square video", "reels size", "change video aspect ratio", "fit video"],
+    accept: "video/*,.mp4,.mov,.webm,.mkv,.m4v",
+    acceptLabel: "one MP4, MOV or WebM video",
+    multiple: false,
+    related: ["trim-video", "compress-video", "merge-videos"],
+    faq: [
+      { q: "Which shape should I pick?", a: "Vertical 9:16 for Reels, TikTok, Shorts and Stories; square 1:1 or portrait 4:5 for feed posts; wide 16:9 for YouTube." },
+      { q: "What does blurred background mean?", a: "Your whole video stays visible in the middle, and a softly blurred copy fills the empty space instead of black bars." },
+      { q: "Is my video uploaded?", a: "No. Everything happens in your browser, so long videos can take a few minutes." },
+    ],
+  },
+  {
+    slug: "merge-videos",
+    name: "Merge videos",
+    short: "Join clips into one video",
+    title: "Merge Videos",
+    promise: "Join two or more clips into one video, in the order you choose, ready to share.",
+    seoTitle: "Merge Videos Online – Join MP4 Clips Into One, Free",
+    seoDescription:
+      "Merge videos for free: join MP4, MOV and WebM clips into one video in any order, with sound kept. Runs in your browser: no upload, no watermark.",
+    category: "video",
+    input: "video",
+    isNew: true,
+    keywords: ["merge videos", "join videos", "combine videos", "video joiner", "merge mp4", "combine clips", "put videos together", "video merger"],
+    accept: "video/*,.mp4,.mov,.webm,.mkv,.m4v",
+    acceptLabel: "two or more MP4, MOV or WebM videos",
+    multiple: true,
+    related: ["trim-video", "resize-video", "compress-video"],
+    faq: [
+      { q: "Can the clips be different sizes?", a: "Yes. Each clip is fitted into the same frame with black bars where needed, so nothing is stretched." },
+      { q: "How long does it take?", a: "Joining happens on your device, so a few minutes of video can take a few minutes. Keep the tab open." },
+      { q: "Are my videos uploaded?", a: "No. Everything happens in your browser." },
     ],
   },
   {
@@ -784,6 +861,7 @@ export const CATEGORIES: { id: Category; name: string; blurb: string; path: stri
   { id: "image", name: "Image tools", blurb: "Hit exact sizes, shapes and formats.", path: "/image-tools/" },
   { id: "video", name: "Video tools", blurb: "Trim, shrink and pull out the sound.", path: "/video-tools/" },
   { id: "audio", name: "Audio tools", blurb: "Convert and cut songs and recordings.", path: "/audio-tools/" },
+  { id: "text", name: "Writing tools", blurb: "Fix grammar and rewrite text with AI.", path: "/writing-tools/" },
 ];
 
 /** Simple search across names, phrases and keywords. */

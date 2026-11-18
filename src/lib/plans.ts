@@ -178,6 +178,7 @@ export const PAID_TOOLS: PaidTool[] = TOOLS.filter((t) => (t.level ?? 0) > 0).fl
 
 function amount(n: number, unit: string): string {
   if (unit === "1,000 characters") return `${n.toLocaleString("en-US")}k characters`;
+  if (unit === "400 words") return `${(n * 400).toLocaleString("en-US")} words`;
   return `${n.toLocaleString("en-US")} ${n === 1 ? unit : `${unit}s`}`;
 }
 

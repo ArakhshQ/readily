@@ -12,6 +12,7 @@ export const state = {
   calls: [] as string[],
   replicateStatus: "processing" as string,
   replicateInputs: [] as Row[],
+  replicateOutput: null as unknown,
   anthropicBodies: [] as Row[],
   subscriptions: new Map<string, Row>(),
   rpcs: [] as { fn: string; args: Row }[],
@@ -29,6 +30,7 @@ export function reset() {
   state.calls = [];
   state.replicateStatus = "processing";
   state.replicateInputs = [];
+  state.replicateOutput = null;
   state.anthropicBodies = [];
   state.subscriptions.clear();
   state.rpcs = [];
@@ -179,7 +181,11 @@ export async function mockFetch(input: string | URL | Request, init: RequestInit
       ? JSON.stringify({ steps: [{ op: "images_to_pdf", page: "a4" }, { op: "pdf_under_size", target_kb: 2000 }], reply: "I'll combine your scans and keep it under 2 MB." })
       : sys.includes("translator")
         ? "Translated text"
-        : "A short summary.";
+        : sys.includes("proofreader")
+          ? '```json\n{"corrected":"I have two apples.","changes":[{"before":"has","after":"have","why":"\'I\' takes \'have\'"},{"before":"apple","after":"apples","why":"plural"}]}\n```'
+          : sys.includes("You rewrite text")
+            ? "A rewritten sentence."
+            : "A short summary.";
     return ok({ content: [{ type: "text", text }] });
   }
   if (url.host === "api.elevenlabs.io") {
@@ -201,7 +207,8 @@ export async function mockFetch(input: string | URL | Request, init: RequestInit
       return ok({ id: "pred_1", status: "starting" }, 201);
     }
     if (url.pathname === "/v1/predictions/pred_1") {
-      return ok({ id: "pred_1", status: state.replicateStatus, output: state.replicateStatus === "succeeded" ? ["https://replicate.delivery/a.wav", "https://replicate.delivery/out.png"] : null, error: state.replicateStatus === "failed" ? "CUDA out of memory" : null });
+      const out = state.replicateOutput ?? ["https://replicate.delivery/a.wav", "https://replicate.delivery/out.png"];
+      return ok({ id: "pred_1", status: state.replicateStatus, output: state.replicateStatus === "succeeded" ? out : null, error: state.replicateStatus === "failed" ? "CUDA out of memory" : null });
     }
   }
   if (url.host === "replicate.delivery") return ok(new Uint8Array([137, 80, 78, 71]), 200, { "content-type": "image/png" });

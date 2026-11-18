@@ -8,7 +8,7 @@ import type { ToolSlug } from "@/lib/tools";
 
 const loading = () => <div className="workspace" style={{ minHeight: 280 }} aria-busy="true" />;
 
-const RUNNERS: Record<ToolSlug, React.ComponentType> = {
+export const RUNNERS: Record<ToolSlug, React.ComponentType> = {
   "jpg-to-pdf": dynamic(() => import("./tools/ImagesToPdf"), { ssr: false, loading }),
   "merge-pdf": dynamic(() => import("./tools/MergePdf"), { ssr: false, loading }),
   "split-pdf": dynamic(() => import("./tools/SplitPdf"), { ssr: false, loading }),
@@ -56,6 +56,12 @@ const RUNNERS: Record<ToolSlug, React.ComponentType> = {
   "photo-to-video": dynamic(() => import("./tools/PhotoToVideo"), { ssr: false, loading }),
   "ai-photo-editor": dynamic(() => import("./tools/AiPhotoEditor"), { ssr: false, loading }),
   "product-photo-backgrounds": dynamic(() => import("./tools/ProductPhotoBackgrounds"), { ssr: false, loading }),
+  "add-text-to-image": dynamic(() => import("./tools/AddTextToImage"), { ssr: false, loading }),
+  "resize-video": dynamic(() => import("./tools/ResizeVideo"), { ssr: false, loading }),
+  "merge-videos": dynamic(() => import("./tools/MergeVideos"), { ssr: false, loading }),
+  "grammar-checker": dynamic(() => import("./tools/GrammarChecker"), { ssr: false, loading }),
+  paraphraser: dynamic(() => import("./tools/Paraphraser"), { ssr: false, loading }),
+  "vocal-remover": dynamic(() => import("./tools/VocalRemover"), { ssr: false, loading }),
 };
 
 export function ToolRunner({ slug }: { slug: ToolSlug }) {

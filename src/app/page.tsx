@@ -35,6 +35,9 @@ export default function Home() {
                 </li>
               ))}
             </ul>
+            <p className="hero-ws">
+              <span className="tag-new">New</span> <Link href="/workspace/">Workspace</Link>: drop one file and use every tool on it, one after another.
+            </p>
           </div>
           <HomeDrop />
         </div>

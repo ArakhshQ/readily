@@ -2,6 +2,7 @@
 // the server's answer into downloadable results.
 import { baseName, canvasToBlob, formatBytes, formatTime, isPdf, loadImage, type Output } from "./files";
 import { fetchResult, runAi, uploadInput, type AiResult } from "./ai-client";
+import { TOOL_BY_SLUG, type ToolSlug } from "./tools";
 
 export type Report = (p: number, label?: string) => void;
 
@@ -128,7 +129,9 @@ export async function serverRun(
     path = await uploadInput(input.blob, input.ext ?? "bin");
   }
   report(0.45, label);
-  return runAi(tool, { ...(input.payload ?? {}), ...(path ? { path } : {}) }, (s) =>
+  // The run button only works after the permission box is ticked, so this records that.
+  const consent = TOOL_BY_SLUG[tool as ToolSlug]?.consent ? { consent: true } : {};
+  return runAi(tool, { ...(input.payload ?? {}), ...consent, ...(path ? { path } : {}) }, (s) =>
     report(Math.min(0.92, 0.45 + s / 400), `${label} · ${formatTime(s)}`),
   );
 }

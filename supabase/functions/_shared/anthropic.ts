@@ -67,6 +67,33 @@ export function translatePrompt(text: string, target: string) {
   };
 }
 
+/** Grammar checker: corrected text plus the list of fixes, as JSON. */
+export function grammarPrompt(text: string) {
+  return {
+    system: `You are a careful proofreader. Fix grammar, spelling, punctuation and word-choice mistakes in the user's text. Keep the original language, meaning, tone, style, line breaks and formatting; do not rewrite sentences that are already correct, and don't translate. Reply with JSON only, no other text:
+{"corrected":"the full corrected text","changes":[{"before":"the wrong words","after":"the fixed words","why":"a short plain-words reason"}]}
+List every change in order, keeping "before" and "after" short (just the words that changed, with a little context). If there are no mistakes, return the text unchanged and an empty list.`,
+    user: text,
+    maxTokens: Math.min(16000, Math.ceil(text.length / 2) + 2000),
+  };
+}
+
+const PARAPHRASE_MODES: Record<string, string> = {
+  fluent: "Make it read smoothly and naturally, fixing awkward wording, while keeping about the same length and tone.",
+  simple: "Make it simple and clear: plain everyday words and short sentences that anyone can follow.",
+  shorter: "Make it noticeably shorter: keep every important point but remove repetition and filler.",
+  formal: "Make it formal and professional, suitable for work, school or official applications.",
+  friendly: "Make it warm, friendly and conversational, while staying polite.",
+};
+
+export function paraphrasePrompt(text: string, mode: string) {
+  return {
+    system: `You rewrite text. ${PARAPHRASE_MODES[mode] ?? PARAPHRASE_MODES.fluent} Keep the meaning, facts, names, numbers and quotes exactly. Write in the same language as the text. Keep paragraphs and line breaks. Output only the rewritten text, with no notes or explanations.`,
+    user: text,
+    maxTokens: Math.min(12000, Math.ceil(text.length / 2) + 1000),
+  };
+}
+
 export const ASSISTANT_STEPS = `Available steps (run in order, each takes the previous step's files):
 - {"op":"images_to_pdf","page":"a4"|"letter"|"fit"}  combine images into one PDF
 - {"op":"merge_pdfs"}  join PDFs into one

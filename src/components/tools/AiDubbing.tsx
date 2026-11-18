@@ -14,14 +14,12 @@ const LANGS: [string, string][] = [
 
 export default function AiDubbing() {
   const [target, setTarget] = useState("es");
-  const [ok, setOk] = useState(false);
   return (
     <ServerTool
       slug="ai-dubbing"
       input="media"
       maxMinutes={10}
       deps={[target]}
-      ready={{ ok, why: "Confirm you have the right to dub this video" }}
       options={
         <>
           <div className="field">
@@ -36,9 +34,6 @@ export default function AiDubbing() {
               ))}
             </select>
           </div>
-          <label className="check">
-            <input type="checkbox" checked={ok} onChange={(e) => setOk(e.target.checked)} /> I own this video or have permission to dub it.
-          </label>
         </>
       }
       actionLabel="Dub it"

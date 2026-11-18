@@ -135,9 +135,16 @@ export function HomeDrop() {
           </button>
         ))}
       </div>
-      <button type="button" className="btn btn-quiet" style={{ marginTop: 10 }} onClick={() => setFiles([])}>
-        Choose different files
-      </button>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 10 }}>
+        {files.length === 1 && (
+          <button type="button" className="btn btn-secondary" onClick={() => (setHandoff(files), router.push("/workspace/"))}>
+            Open in Workspace: all tools in one place
+          </button>
+        )}
+        <button type="button" className="btn btn-quiet" onClick={() => setFiles([])}>
+          Choose different files
+        </button>
+      </div>
     </div>
   );
 }

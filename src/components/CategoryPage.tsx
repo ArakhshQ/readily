@@ -13,7 +13,12 @@ export function CategoryPage({ id, intro, heading }: { id: Category; intro: stri
         <nav className="crumbs" aria-label="Breadcrumb">
           <Link href="/">Readily</Link> / <Link href="/tools/">All tools</Link>
         </nav>
-        <ToolDirectory only={id} headingLevel={1} heading={heading ?? cat.name} intro={`${intro} ${free} free tools that run on your device${paid ? `, plus ${paid} pro and AI tools` : ""}.`} />
+        <ToolDirectory only={id} headingLevel={1} heading={heading ?? cat.name} intro={free ? `${intro} ${free} free tools that run on your device${paid ? `, plus ${paid} pro and AI tools` : ""}.` : `${intro} ${paid} AI tools, each with a free try for signed-up accounts.`} />
+        {id !== "text" && (
+          <p className="ws-cta">
+            Need several changes to one file? <Link href={`/workspace/?for=${id}`}>Open the {id === "pdf" ? "PDF" : id} workspace</Link> and use every tool on it, one after another.
+          </p>
+        )}
         <p className="other-cats">
           Other tools:{" "}
           {CATEGORIES.filter((c) => c.id !== id).map((c, i, a) => (

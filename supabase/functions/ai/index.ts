@@ -10,6 +10,7 @@ import {
   COMMANDS,
   COMMAND_TRIES,
   MAX_TEXT_CHARS,
+  WRITING_MAX_CHARS,
   MAX_TTS_CHARS,
   PLAN_LEVEL,
   SERVER_TOOLS,
@@ -38,7 +39,7 @@ interface Job {
   created_at: string;
 }
 type Done = { text?: string; data?: unknown; file?: { body: BodyInit; name: string; type: string } };
-type Started = { provider: string; ref: string; outName: string; outType: string };
+type Started = { provider: string; ref: string; outName: string; outType: string; pick?: string };
 
 const MAX_RUNNING = 3;
 const OUTPUT_HOURS = 24;
@@ -105,6 +106,10 @@ async function run(user: User, body: Body) {
   const slug = String(body.tool ?? "");
   const tool = SERVER_TOOLS[slug];
   if (!tool) throw new HttpError(400, "Unknown AI tool.");
+  // Voice and face tools: the user must confirm they own the content or have permission.
+  if (tool.consent && body.consent !== true) {
+    throw new HttpError(400, "Please confirm you own this content or have permission from the people in it.");
+  }
   const best = body.quality === "best" && !!tool.best;
   const [profile] = await db.select<{ plan: Plan; credits: number }>("profiles", `select=plan,credits&id=eq.${user.id}`);
   if (!profile) throw new HttpError(403, "Your account isn't ready yet. Log out and in again.");
@@ -124,7 +129,7 @@ async function run(user: User, body: Body) {
   let minutes = 0;
   let chars = 0;
   if (tool.kind === "text") {
-    chars = str(body.text, slug === "translate-document" ? 20_000 : MAX_TEXT_CHARS, "document text").length;
+    chars = str(body.text, slug === "translate-document" ? 20_000 : (WRITING_MAX_CHARS[slug] ?? MAX_TEXT_CHARS), "text").length;
   } else if (tool.kind === "tts") {
     chars = str(body.text, MAX_TTS_CHARS, "script").length;
   } else {
@@ -165,6 +170,7 @@ async function run(user: User, body: Body) {
     credits,
     status: "running",
     input_path: inputPath,
+    ...(tool.consent ? { consent_at: new Date().toISOString() } : {}),
   });
 
   let left: number;
@@ -180,7 +186,7 @@ async function run(user: User, body: Body) {
   try {
     const r = await dispatch(user, slug, best, body, inputPath, bytes);
     if ("provider" in r) {
-      await db.update("ai_jobs", `id=eq.${job.id}`, { provider: r.provider, provider_ref: r.ref, output: { name: r.outName, type: r.outType, trial } });
+      await db.update("ai_jobs", `id=eq.${job.id}`, { provider: r.provider, provider_ref: r.ref, output: { name: r.outName, type: r.outType, trial, ...(r.pick ? { pick: r.pick } : {}) } });
       return { job: job.id, status: "running", credits_used: credits, credits_left: left };
     }
     const output: Record<string, unknown> = {};
@@ -218,6 +224,36 @@ async function dispatch(user: User, slug: string, best: boolean, body: Body, inp
       if (!/^[\p{L} ()\-]+$/u.test(target)) throw new HttpError(400, "Pick a language from the list.");
       const p = claudeApi.translatePrompt(String(body.text), target);
       return { text: await claudeApi.claude({ model: best ? claudeApi.MODEL_BEST() : claudeApi.MODEL_FAST(), ...p }) };
+    }
+    case "grammar-checker": {
+      const raw = await claudeApi.claude({ model: claudeApi.MODEL_FAST(), ...claudeApi.grammarPrompt(String(body.text)) });
+      let parsed: { corrected?: unknown; changes?: unknown };
+      try {
+        parsed = JSON.parse(raw.replace(/^```(?:json)?|```$/g, "").trim());
+      } catch {
+        throw new Error("the grammar check came back in an unexpected shape");
+      }
+      const corrected = typeof parsed.corrected === "string" ? parsed.corrected : "";
+      if (!corrected.trim()) throw new Error("the grammar check returned no text");
+      const changes = (Array.isArray(parsed.changes) ? parsed.changes : [])
+        .filter((c): c is Record<string, unknown> => !!c && typeof c === "object")
+        .slice(0, 300)
+        .map((c) => ({ before: String(c.before ?? "").slice(0, 300), after: String(c.after ?? "").slice(0, 300), why: String(c.why ?? "").slice(0, 200) }));
+      return { text: corrected, data: { changes } };
+    }
+    case "paraphraser": {
+      const mode = ["fluent", "simple", "shorter", "formal", "friendly"].includes(String(body.mode)) ? String(body.mode) : "fluent";
+      return { text: await claudeApi.claude({ model: claudeApi.MODEL_FAST(), ...claudeApi.paraphrasePrompt(String(body.text), mode) }), data: { mode } };
+    }
+    case "vocal-remover": {
+      const keep = body.keep === "vocals" ? "vocals" : "music";
+      return {
+        provider: "replicate",
+        ref: await replicate.startPrediction(slug, await signed!(), {}),
+        outName: keep === "vocals" ? "vocals.mp3" : "instrumental.mp3",
+        outType: "audio/mpeg",
+        pick: keep === "vocals" ? "vocals" : "no_vocals",
+      };
     }
     case "transcribe":
     case "auto-subtitles": {
@@ -307,7 +343,7 @@ async function status(user: User, id: string) {
       const p = await replicate.prediction(job.provider_ref!);
       if (p.status === "failed" || p.status === "canceled") throw new Error(p.error || "the AI job failed");
       if (p.status !== "succeeded") return { job: job.id, status: "running" };
-      const url = replicate.outputUrl(p.output);
+      const url = replicate.outputUrl(p.output, typeof job.output?.pick === "string" ? job.output.pick : undefined);
       if (!url) throw new Error("the AI returned no file");
       const res = await fetch(url);
       if (!res.ok || !res.body) throw new Error("the result couldn't be fetched");

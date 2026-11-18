@@ -58,6 +58,8 @@ export function ServerTool(p: Props) {
   const r = useRun();
   const [m, setM] = useState<Measure>({ minutes: 0, pages: 0, count: 1 });
   const [measuring, setMeasuring] = useState(false);
+  const [agreed, setAgreed] = useState(false);
+  const needsConsent = !!tool.consent;
   const item = f.items[0];
   const { setDetail } = f;
 
@@ -101,6 +103,7 @@ export function ServerTool(p: Props) {
   if (measuring) why = "Reading the file…";
   else if (tooLong) why = `Up to ${p.maxMinutes} minutes at a time. Trim it first.`;
   else if (p.ready && !p.ready.ok) why = p.ready.why;
+  else if (needsConsent && !agreed) why = "Tick the box to confirm you have permission";
   else if (short) why = `This needs ${cost} credits and you have ${access.credits}.`;
 
   const summary = cost ? `About ${cost} ${cost === 1 ? "credit" : "credits"}` : undefined;
@@ -112,10 +115,21 @@ export function ServerTool(p: Props) {
         {...f}
         {...r}
         listHeading="Your file"
-        options={p.options}
+        options={
+          p.options || needsConsent ? (
+            <>
+              {p.options}
+              {needsConsent && (
+                <label className="check consent">
+                  <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} /> {tool.consent}
+                </label>
+              )}
+            </>
+          ) : undefined
+        }
         actionLabel={p.actionLabel}
         busyLabel={p.busyLabel}
-        canRun={!!item && !measuring && !tooLong && (p.ready?.ok ?? true) && !short}
+        canRun={!!item && !measuring && !tooLong && (p.ready?.ok ?? true) && !short && (!needsConsent || agreed)}
         blockedReason={why}
         summary={summary}
         onRun={async () => {

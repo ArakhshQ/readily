@@ -162,7 +162,7 @@ Deno.test("video length is read from the file", async () => {
 Deno.test("dubbing finishes in the background", async () => {
   reset();
   user("user-prem", "premium", 2000);
-  const r = await call("user-prem", { action: "run", tool: "ai-dubbing", target: "es", path: upload("user-prem", "a.mp3", "tone.mp3") });
+  const r = await call("user-prem", { action: "run", tool: "ai-dubbing", target: "es", consent: true, path: upload("user-prem", "a.mp3", "tone.mp3") });
   assertEquals(r.body.status, "running");
   assertEquals(r.body.credits_used, 250);
   const s = await call("user-prem", { action: "status", job: r.body.job });
@@ -173,7 +173,7 @@ Deno.test("dubbing finishes in the background", async () => {
 Deno.test("photo editor uses the official model name", async () => {
   reset();
   user("user-prem", "premium", 2000);
-  const r = await call("user-prem", { action: "run", tool: "ai-photo-editor", prompt: "make it sunset", path: upload("user-prem", "p.png", "img.png") });
+  const r = await call("user-prem", { action: "run", tool: "ai-photo-editor", prompt: "make it sunset", consent: true, path: upload("user-prem", "p.png", "img.png") });
   assertEquals(r.body.credits_used, 10);
   const input = state.replicateInputs[0] as { version: string; input: { prompt: string } };
   assertEquals(input.version, "google/nano-banana");
@@ -220,4 +220,60 @@ Deno.test("voices list hides cloned voices", async () => {
   user("user-prem", "premium", 2000);
   const r = await call("user-prem", { action: "voices" });
   assertEquals((r.body.voices as { id: string }[]).map((v) => v.id), ["v1"]);
+});
+
+Deno.test("voice and face tools refuse to run without the permission box, and record it", async () => {
+  reset();
+  user("user-prem", "premium", 2000);
+  const no = await call("user-prem", { action: "run", tool: "voice-changer", voice: "v1", path: upload("user-prem", "a.mp3", "tone.mp3") });
+  assertEquals(no.status, 400);
+  assert(String(no.body.error).includes("permission"));
+  assertEquals(state.profiles[0].credits, 2000, "nothing charged");
+  const yes = await call("user-prem", { action: "run", tool: "photo-to-video", consent: true, path: upload("user-prem", "p.png", "img.png") });
+  assertEquals(yes.status, 200);
+  const job = state.ai_jobs.at(-1)!;
+  assert(typeof job.consent_at === "string", "consent time recorded");
+  const plain = await call("user-prem", { action: "run", tool: "hd-photo-upscaler", path: upload("user-prem", "q.png", "img.png") });
+  assertEquals(plain.status, 200, "other tools don't need it");
+});
+
+Deno.test("grammar checker: corrected text plus the list of fixes, charged per 2,500 characters", async () => {
+  reset();
+  user("user-basic", "basic", 200);
+  const r = await call("user-basic", { action: "run", tool: "grammar-checker", text: "I has two apple. ".repeat(200) });
+  assertEquals(r.status, 200, JSON.stringify(r.body));
+  assertEquals(r.body.text, "I have two apples.");
+  assertEquals((r.body.data as { changes: unknown[] }).changes.length, 2);
+  assertEquals(r.body.credits_used, 2); // 3,400 characters
+  const big = await call("user-basic", { action: "run", tool: "grammar-checker", text: "a".repeat(20_001) });
+  assertEquals(big.status, 413, "over the limit");
+});
+
+Deno.test("paraphraser: mode is checked, unknown modes fall back to fluent", async () => {
+  reset();
+  user("user-basic", "basic", 200);
+  const r = await call("user-basic", { action: "run", tool: "paraphraser", text: "Please rewrite me.", mode: "formal" });
+  assertEquals(r.body.text, "A rewritten sentence.");
+  assert(String(state.anthropicBodies.at(-1)!.system).includes("formal and professional"));
+  await call("user-basic", { action: "run", tool: "paraphraser", text: "Please rewrite me.", mode: "<script>" });
+  assert(String(state.anthropicBodies.at(-1)!.system).includes("read smoothly"));
+});
+
+Deno.test("vocal remover keeps the chosen track from the model's output", async () => {
+  reset();
+  user("user-pro", "pro", 700);
+  state.replicateOutput = { vocals: "https://replicate.delivery/vocals.mp3", no_vocals: "https://replicate.delivery/no_vocals.mp3" };
+  const r = await call("user-pro", { action: "run", tool: "vocal-remover", keep: "music", path: upload("user-pro", "a.mp3", "tone.mp3") });
+  assertEquals(r.body.status, "running", JSON.stringify(r.body));
+  assertEquals((state.replicateInputs[0] as { input: { stem: string } }).input.stem, "vocals");
+  state.replicateStatus = "succeeded";
+  const s = await call("user-pro", { action: "status", job: r.body.job });
+  assertEquals(s.body.status, "succeeded", JSON.stringify(s.body));
+  assertEquals((s.body.files as { name: string }[])[0].name, "no_vocals.mp3".replace("no_vocals", "instrumental"));
+  // A free account can't use it beyond its one free try.
+  user("user-free", "free", 20);
+  const f1 = await call("user-free", { action: "run", tool: "vocal-remover", keep: "vocals", path: upload("user-free", "b.mp3", "tone.mp3") });
+  assertEquals(f1.status, 200, "free try");
+  const f2 = await call("user-free", { action: "run", tool: "vocal-remover", keep: "vocals", path: upload("user-free", "c.mp3", "tone.mp3") });
+  assertEquals(f2.status, 403);
 });

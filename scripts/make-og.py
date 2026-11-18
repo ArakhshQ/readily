@@ -30,7 +30,8 @@ for block in re.split(r"\n  \{\n", src)[1:]:
         "level": int(level.group(1)) if level else 0,
         "engine": engine.group(1) if engine else "device",
     })
-tools.append({"slug": "ai-tools", "title": "AI tools that do the hard part", "promise": "Voice, photos, video and documents. Try each one free.", "level": 2, "engine": "server"})
+tools.append({"slug": "ai-tools", "title": "AI Tools for Voice, Photos, Video and Documents", "promise": "Clean up voice, restore photos, add subtitles, summarize PDFs and more. Free tries included.", "level": 2, "engine": "server"})
+tools.append({"slug": "workspace", "title": "Workspace", "promise": "Drop one file and use every tool on it, one after another. Undo any step, download when done.", "level": 0, "engine": "device"})
 
 PLAN = {0: ("Free", "#0b7a6a"), 1: ("Basic", "#2f5bff"), 2: ("Pro", "#2f5bff"), 3: ("Premium", "#0f1b3d")}
 

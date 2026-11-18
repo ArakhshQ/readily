@@ -50,6 +50,11 @@ export const MODELS: Record<string, ModelSpec> = {
     model: "arielreplicate/robust_video_matting",
     input: (url) => ({ input_video: url, output_type: "green-screen" }),
   },
+  // Splits a song into "vocals" and "no_vocals" (everything else); the job picks which to keep.
+  "vocal-remover": {
+    model: "ryan5453/demucs",
+    input: (url) => ({ audio: url, stem: "vocals", output_format: "mp3", mp3_bitrate: 256 }),
+  },
   "video-upscaler": {
     model: "topazlabs/video-upscale",
     input: (url, o) => ({ video: url, target_resolution: o.target === "4k" ? "4k" : "1080p", target_fps: 30 }),
@@ -101,8 +106,15 @@ export async function prediction(id: string): Promise<{ status: string; output: 
   return { status: p.status, output: p.output, error: p.error ?? undefined };
 }
 
-/** The result URL from a model's output, whatever shape the model returns. */
-export function outputUrl(output: unknown): string | null {
+/** The result URL from a model's output, whatever shape the model returns.
+ *  `pick` chooses one named output when the model returns several (e.g. "vocals" or "no_vocals"). */
+export function outputUrl(output: unknown, pick?: string): string | null {
+  if (pick && output && typeof output === "object" && !Array.isArray(output)) {
+    const o = output as Record<string, unknown>;
+    const wanted = pick === "no_vocals" ? /^(no_vocals|novocals|accompaniment|instrumental|other)$/i : new RegExp(`^${pick}$`, "i");
+    for (const [k, v] of Object.entries(o)) if (wanted.test(k) && typeof v === "string") return v;
+    throw new Error(`the AI didn't return the ${pick === "no_vocals" ? "music" : pick} track`);
+  }
   if (typeof output === "string") return output;
   if (Array.isArray(output)) {
     const urls = output.filter((x) => typeof x === "string") as string[];

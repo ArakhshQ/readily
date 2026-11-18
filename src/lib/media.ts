@@ -483,3 +483,159 @@ export async function videoForUpload(file: File, duration: number, maxHeight: nu
     onProgress,
   });
 }
+
+// ---------------------------------------------------------------- social video sizes
+
+export type SocialShape = "9:16" | "1:1" | "4:5" | "16:9";
+export type SocialFit = "blur" | "bars" | "crop";
+export const SOCIAL_SHAPES: Record<SocialShape, { label: string; for: string; w: number; h: number }> = {
+  "9:16": { label: "Vertical 9:16", for: "Reels, TikTok, Shorts, Stories", w: 9, h: 16 },
+  "1:1": { label: "Square 1:1", for: "Instagram and Facebook posts", w: 1, h: 1 },
+  "4:5": { label: "Portrait 4:5", for: "Instagram feed", w: 4, h: 5 },
+  "16:9": { label: "Wide 16:9", for: "YouTube, LinkedIn, X", w: 16, h: 9 },
+};
+
+/** Output size for a shape: the short side is 720 or 1080 pixels. */
+export function socialSize(shape: SocialShape, hd: boolean): { width: number; height: number } {
+  const s = SOCIAL_SHAPES[shape];
+  const short = hd ? 1080 : 720;
+  const even = (n: number) => Math.round(n / 2) * 2;
+  return s.w <= s.h ? { width: short, height: even((short * s.h) / s.w) } : { width: even((short * s.w) / s.h), height: short };
+}
+
+function fitFilter(fit: SocialFit, W: number, H: number, input = "0:v", out = "v"): string {
+  if (fit === "crop") return `[${input}]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1[${out}]`;
+  if (fit === "bars") return `[${input}]scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:black,setsar=1[${out}]`;
+  // Blurred copy of the video behind it, made small first so it stays fast.
+  const w4 = Math.round(W / 8) * 2;
+  const h4 = Math.round(H / 8) * 2;
+  return (
+    `[${input}]split=2[${out}a][${out}b];` +
+    `[${out}a]scale=${w4}:${h4}:force_original_aspect_ratio=increase,crop=${w4}:${h4},boxblur=8:2,scale=${W}:${H},eq=brightness=-0.06[${out}bg];` +
+    `[${out}b]scale=${W}:${H}:force_original_aspect_ratio=decrease[${out}fg];` +
+    `[${out}bg][${out}fg]overlay=(W-w)/2:(H-h)/2,setsar=1[${out}]`
+  );
+}
+
+export async function resizeVideoForSocial(
+  file: File,
+  opts: { shape: SocialShape; fit: SocialFit; hd: boolean; duration: number },
+  onProgress?: Job["onProgress"],
+): Promise<Output> {
+  const { width, height } = socialSize(opts.shape, opts.hd);
+  const blob = await run({
+    file,
+    expected: opts.duration,
+    outExt: "mp4",
+    outMime: "video/mp4",
+    label: `Resizing to ${SOCIAL_SHAPES[opts.shape].label.toLowerCase()}`,
+    onProgress,
+    args: (i, o) => [
+      "-i", i,
+      "-filter_complex", fitFilter(opts.fit, width, height),
+      "-map", "[v]", "-map", "0:a?",
+      "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p",
+      "-c:a", "aac", "-b:a", "128k",
+      "-movflags", "+faststart",
+      o,
+    ],
+  });
+  const fitLabel = { blur: "blurred background", bars: "black bars", crop: "cropped to fill" }[opts.fit];
+  return {
+    blob,
+    name: `${baseName(file.name)} (${opts.shape.replace(":", "x")}).mp4`,
+    checks: [`${width} × ${height}`, `${SOCIAL_SHAPES[opts.shape].label}, ${fitLabel}`, `Ready for ${SOCIAL_SHAPES[opts.shape].for}`, formatBytes(blob.size)],
+  };
+}
+
+// ---------------------------------------------------------------- merge clips
+
+/** Joins clips one after another. Clips of other sizes are fitted with black bars. */
+export async function mergeVideos(
+  clips: { file: File; duration: number; width: number; height: number }[],
+  opts: { shape: SocialShape | "first"; hd: boolean },
+  onProgress?: (p: number, label: string) => void,
+): Promise<Output> {
+  if (clips.length < 2) throw new Error("Add at least two videos to merge.");
+  const first = clips[0];
+  let W: number;
+  let H: number;
+  if (opts.shape === "first") {
+    // Keep the first clip's shape, at most 1080 on the short side.
+    const scale = Math.min(1, (opts.hd ? 1080 : 720) / Math.max(1, Math.min(first.width || 1280, first.height || 720)));
+    W = Math.round(((first.width || 1280) * scale) / 2) * 2;
+    H = Math.round(((first.height || 720) * scale) / 2) * 2;
+  } else ({ width: W, height: H } = socialSize(opts.shape, opts.hd));
+  const total = clips.reduce((a, c) => a + (c.duration || 0), 0);
+
+  const task = queue.then(async () => {
+    onProgress?.(0, "Loading the video engine (first time only)");
+    const ff = await engine();
+    const names = clips.map((c, i) => `clip${i}.${(c.file.name.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "")}`);
+    let log = "";
+    const onLog = ({ message }: { message: string }) => {
+      log += message + "\n";
+    };
+    const onProg = ({ time }: { time: number }) => {
+      const s = time / 1_000_000;
+      if (total > 0 && s > 0) onProgress?.(Math.min(0.99, s / total), "Joining your videos");
+    };
+    ff.on("log", onLog);
+    try {
+      for (let i = 0; i < clips.length; i++) {
+        onProgress?.(0.01, `Reading clip ${i + 1} of ${clips.length}`);
+        await ff.writeFile(names[i], new Uint8Array(await clips[i].file.arrayBuffer()));
+      }
+      // Which clips have sound? (ffmpeg lists the streams; a clip without sound gets silence.)
+      const hasAudio: boolean[] = [];
+      for (const n of names) {
+        log = "";
+        await ff.exec(["-hide_banner", "-i", n]).catch(() => 1);
+        hasAudio.push(/Stream #\d+:\d+.*Audio:/.test(log));
+      }
+      const parts: string[] = [];
+      const extra: string[] = [];
+      clips.forEach((c, i) => {
+        parts.push(`[${i}:v]scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=30,format=yuv420p[v${i}]`);
+        if (hasAudio[i]) parts.push(`[${i}:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo[a${i}]`);
+        else {
+          extra.push("-f", "lavfi", "-t", (c.duration || 1).toFixed(3), "-i", "anullsrc=r=44100:cl=stereo");
+          parts.push(`[${clips.length + extra.filter((x) => x === "-i").length - 1}:a]aformat=sample_fmts=fltp:channel_layouts=stereo[a${i}]`);
+        }
+      });
+      const chain = clips.map((_, i) => `[v${i}][a${i}]`).join("");
+      parts.push(`${chain}concat=n=${clips.length}:v=1:a=1[v][a]`);
+      ff.on("progress", onProg);
+      const code = await ff.exec([
+        ...names.flatMap((n) => ["-i", n]),
+        ...extra,
+        "-filter_complex", parts.join(";"),
+        "-map", "[v]", "-map", "[a]",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
+        "-c:a", "aac", "-b:a", "128k",
+        "-movflags", "+faststart",
+        "merged.mp4",
+      ]);
+      ff.off("progress", onProg);
+      if (code !== 0) throw new Error((log.match(/.*(error|invalid|not supported|could not).*/gi) ?? []).pop() || "processing failed");
+      const data = (await ff.readFile("merged.mp4")) as Uint8Array;
+      if (!data.length) throw new Error("the result was empty");
+      return new Blob([data as BlobPart], { type: "video/mp4" });
+    } catch (e) {
+      const why = e instanceof Error ? e.message : String(e);
+      throw new Error(`These videos couldn't be joined (${why.slice(0, 140)}). One of them may be damaged or in a format this browser can't decode.`);
+    } finally {
+      ff.off("log", onLog);
+      ff.off("progress", onProg);
+      for (const n of names) await ff.deleteFile(n).catch(() => {});
+      await ff.deleteFile("merged.mp4").catch(() => {});
+    }
+  });
+  queue = task.catch(() => {});
+  const blob = await task;
+  return {
+    blob,
+    name: `merged video (${clips.length} clips).mp4`,
+    checks: [`${clips.length} clips joined`, `${formatTime(total)} long`, `${W} × ${H} MP4`, formatBytes(blob.size)],
+  };
+}

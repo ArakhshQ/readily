@@ -6,21 +6,15 @@ import { VoicePicker } from "./VoicePicker";
 
 export default function VoiceChanger() {
   const [voice, setVoice] = useState("");
-  const [ok, setOk] = useState(false);
   return (
     <ServerTool
       slug="voice-changer"
       input="media"
       maxMinutes={10}
       deps={[voice]}
-      ready={{ ok: !!voice && ok, why: !voice ? "Pick a voice" : "Confirm you have the right to use this recording" }}
+      ready={{ ok: !!voice, why: "Pick a voice" }}
       options={
-        <>
-          <VoicePicker value={voice} onChange={setVoice} />
-          <label className="check">
-            <input type="checkbox" checked={ok} onChange={(e) => setOk(e.target.checked)} /> This is my recording, or I have permission to use it, and I won&apos;t use the result to mislead anyone.
-          </label>
-        </>
+<VoicePicker value={voice} onChange={setVoice} />
       }
       actionLabel="Change voice"
       busyLabel="Changing the voice"
