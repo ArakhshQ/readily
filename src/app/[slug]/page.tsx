@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Lock, ToolGlyph } from "@/components/Icons";
 import { ToolRunner } from "@/components/ToolRunner";
 import { SITE } from "@/lib/site";
+import { guideFor } from "@/lib/guides";
 import { CATEGORIES, TOOLS, TOOL_BY_SLUG, type ToolSlug } from "@/lib/tools";
 
 export const dynamicParams = false;
@@ -46,6 +47,8 @@ export default async function ToolPage({ params }: Params) {
   const tool = TOOL_BY_SLUG[slug as ToolSlug];
   if (!tool) notFound();
   const cat = CATEGORIES.find((c) => c.id === tool.category)!;
+  const guide = guideFor(tool.slug);
+  const faq = [...tool.faq, ...(guide?.faq ?? [])];
 
   const jsonLd = [
     {
@@ -72,7 +75,7 @@ export default async function ToolPage({ params }: Params) {
     {
       "@context": "https://schema.org",
       "@type": "FAQPage",
-      mainEntity: tool.faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+      mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
     },
   ];
 
@@ -101,10 +104,38 @@ export default async function ToolPage({ params }: Params) {
 
         <ToolRunner slug={tool.slug} />
 
+        {guide && (
+          <article className="guide" aria-label={`About ${tool.name}`}>
+            <section className="guide-steps" aria-labelledby="howto-h">
+              <h2 id="howto-h">{guide.howTo}</h2>
+              <ol>
+                {guide.steps.map((s) => (
+                  <li key={s}>{s}</li>
+                ))}
+              </ol>
+            </section>
+            {guide.sections.map((sec) => (
+              <section className="guide-part" key={sec.h}>
+                <h2>{sec.h}</h2>
+                {sec.p.map((para) => (
+                  <p key={para}>{para}</p>
+                ))}
+                {sec.list && (
+                  <ul>
+                    {sec.list.map((li) => (
+                      <li key={li}>{li}</li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            ))}
+          </article>
+        )}
+
         <section className="section" style={{ paddingBottom: 0 }} aria-labelledby="faq-h">
           <h2 id="faq-h">Questions</h2>
           <div className="faq">
-            {tool.faq.map((f) => (
+            {faq.map((f) => (
               <details key={f.q}>
                 <summary>{f.q}</summary>
                 <p>{f.a}</p>

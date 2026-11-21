@@ -1056,6 +1056,58 @@ fieldset.field {
   }
 }
 
+/* ------------------------------------------------------------ tool page guides */
+
+.guide {
+  display: grid;
+  gap: 30px;
+  padding-top: clamp(48px, 7vw, 72px);
+  color: var(--ink-2);
+  font-size: 17px;
+  line-height: 1.65;
+}
+.guide h2 {
+  color: var(--ink);
+  font-size: clamp(22px, 2.6vw, 26px);
+  margin-bottom: 10px;
+}
+.guide p + p {
+  margin-top: 10px;
+}
+.guide ul {
+  margin: 10px 0 0;
+  padding-left: 22px;
+  display: grid;
+  gap: 4px;
+}
+.guide-steps ol {
+  list-style: none;
+  counter-reset: step;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.guide-steps li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+.guide-steps li::before {
+  content: counter(step);
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--cobalt-wash);
+  color: var(--cobalt);
+  font-weight: 800;
+  font-size: 15px;
+}
+
 /* ------------------------------------------------------------ FAQ and related */
 
 .faq {
