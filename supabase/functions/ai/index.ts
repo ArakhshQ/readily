@@ -15,6 +15,7 @@ import {
   PLAN_LEVEL,
   SERVER_TOOLS,
   creditsFor,
+  videoFactor,
   type Plan,
 } from "../_shared/tools.ts";
 import * as claudeApi from "../_shared/anthropic.ts";
@@ -153,7 +154,7 @@ async function run(user: User, body: Body) {
       throw new HttpError(413, `This tool takes up to ${tool.maxMinutes} minutes at a time. Trim the file and try again.`);
     }
   }
-  const credits = creditsFor(slug, best, { minutes, chars });
+  const credits = creditsFor(slug, best, { minutes, chars, factor: slug === "photo-to-video" ? videoFactor(body.seconds, body.sound) : 1 });
 
   // Who may use it: their plan, or one free try of a Basic or Pro tool.
   let trial = false;
@@ -282,7 +283,8 @@ async function dispatch(user: User, slug: string, best: boolean, body: Body, inp
     case "photo-to-video": {
       const prompt = slug === "photo-to-video" ? String(body.prompt ?? "").slice(0, 400) : str(body.prompt, 500, "description");
       const outName = slug === "photo-to-video" ? "photo-video.mp4" : `${slug === "ai-photo-editor" ? "edited" : "product"}.png`;
-      return { provider: "replicate", ref: await replicate.startPrediction(slug, await signed!(), { prompt }), outName, outType: slug === "photo-to-video" ? "video/mp4" : "image/png" };
+      const opts = slug === "photo-to-video" ? { prompt, seconds: body.seconds === 10 ? 10 : 5, sound: body.sound === true } : { prompt };
+      return { provider: "replicate", ref: await replicate.startPrediction(slug, await signed!(), opts), outName, outType: slug === "photo-to-video" ? "video/mp4" : "image/png" };
     }
     case "hd-photo-upscaler":
     case "restore-photo":

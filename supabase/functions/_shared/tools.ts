@@ -37,9 +37,10 @@ export const SERVER_TOOLS: Record<string, ServerTool> = {
   "ai-dubbing": { level: 3, kind: "audio", credits: 125, maxMinutes: 10, consent: true },
   "video-background-remover": { level: 3, kind: "video", credits: 25, maxMinutes: 5, consent: true },
   "video-upscaler": { level: 3, kind: "video", credits: 250, maxMinutes: 3 },
-  "photo-to-video": { level: 3, kind: "image", credits: 40, consent: true },
-  "ai-photo-editor": { level: 3, kind: "image", credits: 10, consent: true },
-  "product-photo-backgrounds": { level: 3, kind: "image", credits: 10 },
+  // Per 5-second silent clip; 10 seconds doubles it and natural sound adds half (see videoFactor).
+  "photo-to-video": { level: 3, kind: "image", credits: 120, consent: true },
+  "ai-photo-editor": { level: 3, kind: "image", credits: 35, consent: true },
+  "product-photo-backgrounds": { level: 3, kind: "image", credits: 35 },
   "grammar-checker": { level: 1, kind: "text", credits: 1 },
   paraphraser: { level: 1, kind: "text", credits: 1 },
   "vocal-remover": { level: 2, kind: "audio", credits: 2, maxMinutes: 10 },
@@ -57,7 +58,12 @@ export const WRITING_CHARS_PER_CREDIT = 2500;
 export const WRITING_MAX_CHARS: Record<string, number> = { "grammar-checker": 20_000, paraphraser: 10_000 };
 
 /** Credits for one request. `units` is minutes, pages, characters or images depending on the tool. */
-export function creditsFor(slug: string, best: boolean, measure: { minutes?: number; chars?: number }): number {
+/** Photo to video: 10 seconds costs twice a 5-second clip; natural sound adds half. */
+export function videoFactor(seconds: unknown, sound: unknown): number {
+  return (seconds === 10 ? 2 : 1) * (sound === true ? 1.5 : 1);
+}
+
+export function creditsFor(slug: string, best: boolean, measure: { minutes?: number; chars?: number; factor?: number }): number {
   const t = SERVER_TOOLS[slug];
   const per = best && t.best ? t.best.credits : t.credits;
   switch (slug) {
@@ -73,6 +79,8 @@ export function creditsFor(slug: string, best: boolean, measure: { minutes?: num
       return Math.max(1, Math.ceil((measure.chars ?? 0) / WRITING_CHARS_PER_CREDIT)) * per;
     case "assistant":
       return 0;
+    case "photo-to-video":
+      return Math.round(per * (measure.factor ?? 1));
     default:
       if (t.kind === "audio" || t.kind === "video") return Math.max(1, Math.ceil(measure.minutes ?? 0)) * per;
       return per;

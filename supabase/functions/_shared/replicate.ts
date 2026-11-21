@@ -28,23 +28,40 @@ export const MODELS: Record<string, ModelSpec> = {
     model: "piddnad/ddcolor",
     input: (url) => ({ image: url, model_size: "large" }),
   },
+  // Google's Nano Banana Pro (Gemini 3 Pro Image): strong, faithful photo edits at 2K.
   "ai-photo-editor": {
-    model: "google/nano-banana",
-    input: (url, o) => ({ prompt: String(o.prompt ?? ""), image_input: [url], output_format: "png" }),
+    model: "google/nano-banana-pro",
+    input: (url, o) => ({
+      prompt: `Edit this photo: ${String(o.prompt ?? "")}. Change only what is asked. Keep everything else exactly as it is: the same people and faces, composition, framing, lighting and colours. Return the whole photo, photorealistic.`,
+      image_input: [url],
+      aspect_ratio: "match_input_image",
+      resolution: "2K",
+      output_format: "png",
+    }),
   },
   "product-photo-backgrounds": {
-    model: "google/nano-banana",
+    model: "google/nano-banana-pro",
     input: (url, o) => ({
       prompt: `Professional product photo. Keep the product exactly as it is: same shape, colours, labels and text. Replace only the background and lighting with: ${String(
         o.prompt ?? "a clean white studio background with a soft shadow",
       )}. Photorealistic, high detail.`,
       image_input: [url],
+      aspect_ratio: "match_input_image",
+      resolution: "2K",
       output_format: "png",
     }),
   },
+  // Kling 3.0 in Pro mode: 1080p, 5 or 10 seconds, optional natural sound.
   "photo-to-video": {
-    model: "wan-video/wan-2.2-i2v-fast",
-    input: (url, o) => ({ image: url, prompt: String(o.prompt || "natural, gentle motion, cinematic"), num_frames: 81, frames_per_second: 16, resolution: "480p", go_fast: true }),
+    model: "kwaivgi/kling-v3-video",
+    input: (url, o) => ({
+      start_image: url,
+      prompt: String(o.prompt || "Bring this photo to life with natural, realistic motion. Smooth, cinematic camera movement. Keep the people, faces and scene exactly as in the photo."),
+      negative_prompt: "blurry, distorted, warped faces, morphing, extra limbs, flicker, low quality, text, watermark",
+      mode: "pro",
+      duration: o.seconds === 10 ? 10 : 5,
+      generate_audio: o.sound === true,
+    }),
   },
   "video-background-remover": {
     model: "arielreplicate/robust_video_matting",

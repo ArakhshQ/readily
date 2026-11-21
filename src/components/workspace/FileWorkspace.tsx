@@ -9,7 +9,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { AccessBanner, AccessProvider } from "../Access";
 import { Dropzone } from "../Dropzone";
-import { ArrowLeft, Check, Download, RotateCcw, ToolGlyph } from "../Icons";
+import { ArrowLeft, Check, Download, Eye, RotateCcw, ToolGlyph } from "../Icons";
 import { PlanTag } from "../PlanTag";
 import { RUNNERS } from "../ToolRunner";
 import { EmbedContext, type Embed } from "@/lib/embed";
@@ -51,6 +51,9 @@ export function kindOf(file: File): Kind | null {
   return null;
 }
 
+/** Tools that show the file in their own editor, so the big preview steps aside. */
+const SELF_PREVIEW = new Set<ToolSlug>(["add-text-to-image", "object-eraser", "crop-image", "organize-pdf", "sign-pdf", "trim-video", "trim-audio"]);
+
 const isHeic = (f: File) => /heic|heif/i.test(f.type) || /\.(heic|heif)$/i.test(f.name);
 
 interface Version {
@@ -67,7 +70,9 @@ export function FileWorkspace() {
   const [runKey, setRunKey] = useState(0);
   const [notice, setNotice] = useState<{ tool: ToolSlug; checks: string[]; note?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [comparing, setComparing] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
+  const stage = useRef<HTMLElement>(null);
   const current = versions[versions.length - 1];
   const kind = current ? kindOf(current.file) : null;
 
@@ -99,6 +104,8 @@ export function FileWorkspace() {
         setVersions((v) => [...v, { file, label: TOOL_BY_SLUG[tool].name }]);
         setNotice({ tool, checks: o.checks, note: o.note });
         setActive(null);
+        // Bring the updated file into view so the change is the first thing people see.
+        setTimeout(() => stage.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
         return true;
       },
       onBack() {
@@ -144,50 +151,83 @@ export function FileWorkspace() {
   const editList = isHeic(current.file) ? (["heic-to-jpg", ...tools.edit] as ToolSlug[]) : tools.edit;
   const tool = active ? TOOL_BY_SLUG[active] : null;
   const Runner = active ? RUNNERS[active] : null;
+  const previous = versions.length > 1 ? versions[versions.length - 2] : null;
+  const canCompare = !!previous && kind === "image" && kindOf(previous.file) === "image" && !active;
+  // Tools with their own editor (drawing, cropping, trimming…) show the file themselves.
+  const hideStage = !!active && SELF_PREVIEW.has(active);
+  const hold = (on: boolean) => () => setComparing(on);
 
   return (
-    <div className="ws">
-      <section className="ws-file" aria-label="Your file">
-        <Preview file={current.file} kind={kind} />
-        <div className="ws-actions">
-          <button type="button" className="btn btn-primary" onClick={() => downloadBlob(current.file, current.file.name)}>
-            <Download size={18} />
-            Download
-          </button>
-          {versions.length > 1 && (
-            <button type="button" className="btn btn-secondary" onClick={() => (setVersions((v) => v.slice(0, -1)), setNotice(null), setActive(null))}>
-              <RotateCcw size={18} />
-              Undo
+    <div className={`ws${active ? " ws-tooling" : ""}`}>
+      <section className="ws-canvas" ref={stage} aria-label="Your file">
+        {!hideStage && <Preview file={current.file} kind={kind} before={comparing && canCompare ? previous!.file : null} compact={!!active} />}
+        <div className="ws-bar">
+          <p className="ws-facts">
+            <strong>{current.file.name}</strong>
+            <span>
+              {formatBytes(current.file.size)}
+              {versions.length > 1 ? ` · ${versions.length - 1} ${versions.length === 2 ? "edit" : "edits"}` : ""}
+            </span>
+          </p>
+          <div className="ws-actions">
+            {canCompare && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                aria-pressed={comparing}
+                onPointerDown={hold(true)}
+                onPointerUp={hold(false)}
+                onPointerLeave={hold(false)}
+                onPointerCancel={hold(false)}
+                onKeyDown={(e) => (e.key === " " || e.key === "Enter") && (e.preventDefault(), setComparing(true))}
+                onKeyUp={hold(false)}
+                onBlur={hold(false)}
+                onContextMenu={(e) => e.preventDefault()}
+              >
+                <Eye size={18} />
+                Hold to compare
+              </button>
+            )}
+            {versions.length > 1 && (
+              <button type="button" className="btn btn-secondary" onClick={() => (setVersions((v) => v.slice(0, -1)), setNotice(null), setActive(null))}>
+                <RotateCcw size={18} />
+                Undo
+              </button>
+            )}
+            <button type="button" className="btn btn-primary" onClick={() => downloadBlob(current.file, current.file.name)}>
+              <Download size={18} />
+              Download
             </button>
-          )}
-          <button type="button" className="btn btn-ghost" onClick={() => (setVersions([]), setActive(null), setNotice(null))}>
-            New file
-          </button>
+            <button type="button" className="btn btn-ghost" onClick={() => (setVersions([]), setActive(null), setNotice(null))}>
+              New file
+            </button>
+          </div>
         </div>
-        {versions.length > 1 && (
-          <ol className="ws-steps" aria-label="Steps so far">
-            {versions.map((v, i) => (
-              <li key={i} className={i === versions.length - 1 ? "now" : ""}>
-                {i > 0 && <span aria-hidden="true">→</span>}
-                {v.label}
-              </li>
-            ))}
-          </ol>
-        )}
       </section>
 
-      <section className="ws-side" ref={panel} aria-label={tool ? tool.name : "Tools"}>
-        {notice && !active && (
-          <div className="ws-notice" role="status">
-            <Check size={18} strokeWidth={3} />
-            <div>
-              <strong>{TOOL_BY_SLUG[notice.tool].name} done.</strong> {notice.checks.slice(0, 3).join(" · ")}
-              {notice.note && <p className="hint">{notice.note}</p>}
-              <p className="hint">Download it, or pick another tool to keep going.</p>
-            </div>
-          </div>
-        )}
+      {versions.length > 1 && (
+        <ol className="ws-steps" aria-label="Steps so far">
+          {versions.map((v, i) => (
+            <li key={i} className={i === versions.length - 1 ? "now" : ""}>
+              {i > 0 && <span aria-hidden="true">→</span>}
+              {v.label}
+            </li>
+          ))}
+        </ol>
+      )}
 
+      {notice && !active && (
+        <div className="ws-notice" role="status">
+          <Check size={18} strokeWidth={3} />
+          <div>
+            <strong>{TOOL_BY_SLUG[notice.tool].name} done.</strong> {notice.checks.slice(0, 3).join(" · ")}
+            {notice.note && <p className="ws-warn">{notice.note}</p>}
+            <p className="hint">{canCompare ? "Hold “Hold to compare” to see the photo before this step. " : ""}Download it, or pick another tool to keep going.</p>
+          </div>
+        </div>
+      )}
+
+      <section className="ws-dock" ref={panel} aria-label={tool ? tool.name : "Tools"}>
         {tool && Runner ? (
           <div className="ws-tool">
             <div className="ws-tool-head">
@@ -230,15 +270,12 @@ function ToolGroup({ title, sub, list, onPick }: { title: string; sub: string; l
         {list.map((slug) => {
           const t = TOOL_BY_SLUG[slug];
           return (
-            <button key={slug} type="button" className="ws-tool-btn" onClick={() => onPick(slug)}>
+            <button key={slug} type="button" className="ws-tool-btn" title={t.short} onClick={() => onPick(slug)}>
               <span className="ws-icon">
                 <ToolGlyph slug={slug} />
               </span>
-              <span className="ws-name">
-                {t.name}
-                {toolLevel(t) > 0 && <PlanTag tool={t} />}
-              </span>
-              <span className="ws-short">{t.short}</span>
+              <span className="ws-name">{t.name}</span>
+              {toolLevel(t) > 0 && <PlanTag tool={t} />}
             </button>
           );
         })}
@@ -247,15 +284,17 @@ function ToolGroup({ title, sub, list, onPick }: { title: string; sub: string; l
   );
 }
 
-/** A look at the current file, with its key facts. */
-function Preview({ file, kind }: { file: File; kind: Kind }) {
+/** The current file on a large stage. While comparing, the version before the last step. */
+function Preview({ file, kind, before, compact }: { file: File; kind: Kind; before: File | null; compact: boolean }) {
   const [url, setUrl] = useState<string | null>(null);
+  const [beforeUrl, setBeforeUrl] = useState<string | null>(null);
   const [facts, setFacts] = useState<string>("");
   const [pdfThumb, setPdfThumb] = useState<string | null>(null);
 
   useEffect(() => {
     setFacts("");
     setPdfThumb(null);
+    setUrl(null);
     if (kind === "pdf") {
       let live = true;
       (async () => {
@@ -263,7 +302,7 @@ function Preview({ file, kind }: { file: File; kind: Kind }) {
           const [{ thumbnails }, { pageCount }] = await Promise.all([import("@/lib/pdf-render"), import("@/lib/pdf-ops")]);
           const n = await pageCount(file).catch(() => 0);
           if (live && n) setFacts(`${n} ${n === 1 ? "page" : "pages"}`);
-          const [first] = await thumbnails(file, 480, (i, u) => i === 0 && live && setPdfThumb(u));
+          const [first] = await thumbnails(file, 900, (i, u) => i === 0 && live && setPdfThumb(u));
           if (live && first) setPdfThumb(first);
         } catch {
           if (live) setFacts("Preview unavailable (it may be password-protected)");
@@ -278,36 +317,41 @@ function Preview({ file, kind }: { file: File; kind: Kind }) {
     return () => URL.revokeObjectURL(u);
   }, [file, kind]);
 
+  useEffect(() => {
+    if (!before) return setBeforeUrl(null);
+    const u = URL.createObjectURL(before);
+    setBeforeUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [before]);
+
+  const showing = beforeUrl ?? url;
   return (
-    <div className="ws-preview">
-      <div className={`ws-stage ws-stage-${kind}`}>
-        {kind === "image" && url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt="Your image" onLoad={(e) => setFacts(`${e.currentTarget.naturalWidth} × ${e.currentTarget.naturalHeight} px`)} onError={() => setFacts("No preview for this format, but the tools still work")} />
-        )}
-        {kind === "pdf" && (pdfThumb ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={pdfThumb} alt="First page of your PDF" />
-        ) : (
-          <div className="ws-placeholder">PDF</div>
-        ))}
-        {kind === "video" && url && (
-          <video src={url} controls playsInline onLoadedMetadata={(e) => setFacts(`${formatTime(e.currentTarget.duration)}, ${e.currentTarget.videoWidth} × ${e.currentTarget.videoHeight}`)} />
-        )}
-        {kind === "audio" && url && (
-          <div className="ws-audio">
-            <div className="ws-placeholder">♪</div>
-            <audio src={url} controls onLoadedMetadata={(e) => setFacts(formatTime(e.currentTarget.duration))} />
-          </div>
-        )}
-      </div>
-      <p className="ws-facts">
-        <strong>{file.name}</strong>
-        <span>
-          {formatBytes(file.size)}
-          {facts ? ` · ${facts}` : ""}
-        </span>
-      </p>
+    <div className={`ws-stage ws-stage-${kind}${compact ? " compact" : ""}`}>
+      {kind === "image" && showing && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={showing}
+          alt={beforeUrl ? "Your image before the last step" : "Your image"}
+          onLoad={(e) => !beforeUrl && setFacts(`${e.currentTarget.naturalWidth} × ${e.currentTarget.naturalHeight} px`)}
+          onError={() => setFacts("No preview for this format, but the tools still work")}
+        />
+      )}
+      {kind === "pdf" && (pdfThumb ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={pdfThumb} alt="First page of your PDF" />
+      ) : (
+        <div className="ws-placeholder">PDF</div>
+      ))}
+      {kind === "video" && url && (
+        <video src={url} controls playsInline onLoadedMetadata={(e) => setFacts(`${formatTime(e.currentTarget.duration)}, ${e.currentTarget.videoWidth} × ${e.currentTarget.videoHeight}`)} />
+      )}
+      {kind === "audio" && url && (
+        <div className="ws-audio">
+          <div className="ws-placeholder">♪</div>
+          <audio src={url} controls onLoadedMetadata={(e) => setFacts(formatTime(e.currentTarget.duration))} />
+        </div>
+      )}
+      {beforeUrl ? <span className="ws-badge before">Before</span> : facts && <span className="ws-badge">{facts}</span>}
     </div>
   );
 }

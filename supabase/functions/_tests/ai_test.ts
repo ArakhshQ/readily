@@ -170,14 +170,41 @@ Deno.test("dubbing finishes in the background", async () => {
   assertEquals((s.body.files as { name: string }[])[0].name, "dubbed-es.mp3");
 });
 
-Deno.test("photo editor uses the official model name", async () => {
+Deno.test("photo editor: Nano Banana Pro at 2K, keeps everything not asked for", async () => {
   reset();
   user("user-prem", "premium", 2000);
   const r = await call("user-prem", { action: "run", tool: "ai-photo-editor", prompt: "make it sunset", consent: true, path: upload("user-prem", "p.png", "img.png") });
-  assertEquals(r.body.credits_used, 10);
-  const input = state.replicateInputs[0] as { version: string; input: { prompt: string } };
-  assertEquals(input.version, "google/nano-banana");
-  assertEquals(input.input.prompt, "make it sunset");
+  assertEquals(r.body.credits_used, 35);
+  const input = state.replicateInputs[0] as { version: string; input: { prompt: string; image_input: string[]; resolution: string } };
+  assertEquals(input.version, "google/nano-banana-pro");
+  assert(input.input.prompt.includes("make it sunset"));
+  assert(input.input.prompt.includes("Change only what is asked"));
+  assertEquals(input.input.resolution, "2K");
+  assertEquals(input.input.image_input.length, 1);
+});
+
+Deno.test("photo to video: Kling 3.0 at 1080p; 10 seconds and sound cost more", async () => {
+  reset();
+  user("user-prem", "premium", 2000);
+  const short = await call("user-prem", { action: "run", tool: "photo-to-video", consent: true, path: upload("user-prem", "p.png", "img.png") });
+  assertEquals(short.status, 200, JSON.stringify(short.body));
+  assertEquals(short.body.credits_used, 120);
+  const a = state.replicateInputs[0] as { version: string; input: Record<string, unknown> };
+  assert(a.version.startsWith("kwaivgi/kling-v3-video"));
+  assertEquals(a.input.mode, "pro");
+  assertEquals(a.input.duration, 5);
+  assertEquals(a.input.generate_audio, false);
+  assert(typeof a.input.start_image === "string");
+  const long = await call("user-prem", { action: "run", tool: "photo-to-video", seconds: 10, sound: true, prompt: "waves roll in", consent: true, path: upload("user-prem", "q.png", "img.png") });
+  assertEquals(long.body.credits_used, 360);
+  const b = state.replicateInputs[1] as { input: Record<string, unknown> };
+  assertEquals(b.input.duration, 10);
+  assertEquals(b.input.generate_audio, true);
+  assertEquals(b.input.prompt, "waves roll in");
+  // Anything else for the length falls back to 5 seconds (and the 5-second price).
+  const odd = await call("user-prem", { action: "run", tool: "photo-to-video", seconds: 60, consent: true, path: upload("user-prem", "r.png", "img.png") });
+  assertEquals(odd.body.credits_used, 120);
+  assertEquals(credits("user-prem"), 2000 - 120 - 360 - 120);
 });
 
 Deno.test("voiceover charged per 1,000 characters", async () => {

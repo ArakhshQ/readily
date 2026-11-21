@@ -110,6 +110,7 @@ export function ResultPanel({ tool, outputs, zipName, next, onRestart }: Props) 
                   </li>
                 ))}
               </ul>
+              {i < 6 && <MediaPreview output={o} />}
               {o.note && <Message kind="note">{o.note}</Message>}
               {o.preview !== undefined && o.preview.length > 0 && (
                 <div className="text-preview">
@@ -182,6 +183,38 @@ export function ResultPanel({ tool, outputs, zipName, next, onRestart }: Props) 
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+type Media = "image" | "video" | "audio";
+function mediaOf(o: Output): Media | null {
+  const t = o.blob.type;
+  if (t.startsWith("image/") || /\.(png|jpe?g|webp|gif|avif)$/i.test(o.name)) return /svg/i.test(t) ? null : "image";
+  if (t.startsWith("video/") || /\.(mp4|webm|mov|m4v)$/i.test(o.name)) return "video";
+  if (t.startsWith("audio/") || /\.(mp3|wav|m4a|aac|ogg|opus|flac)$/i.test(o.name)) return "audio";
+  return null;
+}
+
+/** Lets people see (or play) the result before downloading it. */
+function MediaPreview({ output }: { output: Output }) {
+  const media = mediaOf(output);
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!media) return;
+    const u = URL.createObjectURL(output.blob);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [output.blob, media]);
+  if (!media || !url) return null;
+  return (
+    <div className={`result-media result-media-${media}`}>
+      {media === "image" && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt={`Preview of ${output.name}`} />
+      )}
+      {media === "video" && <video src={url} controls playsInline preload="metadata" />}
+      {media === "audio" && <audio src={url} controls preload="metadata" />}
     </div>
   );
 }

@@ -17,7 +17,8 @@ export default function AiPhotoEditor() {
       deps={[prompt]}
       payload={{ prompt }}
       ready={{ ok: prompt.trim().length > 3, why: "Describe the change" }}
-      checks={["Edited by AI"]}
+      checks={["Edited by AI", "2K quality"]}
+      unchangedNote={"The AI barely changed your photo. Try saying exactly what to change and where, for example \"remove the man in the red jacket on the left\". For erasing small things you can also use the free Object eraser and paint over them."}
       options={
         <div className="field">
           <label className="field-label" htmlFor="pe">
@@ -31,7 +32,7 @@ export default function AiPhotoEditor() {
               </button>
             ))}
           </div>
-          <p className="hint">Don&apos;t create misleading images of real people or fake documents.</p>
+          <p className="hint">Tip: name the thing and where it is (&quot;the bin on the right&quot;). Don&apos;t create misleading images of real people or fake documents.</p>
         </div>
       }
       next={["photo-to-video", "compress-image"]}

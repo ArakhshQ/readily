@@ -149,6 +149,30 @@ export async function resultFiles(res: AiResult, original: string, suffix: strin
   );
 }
 
+/**
+ * How many areas of the photo visibly changed (0 to 1). Both images are shrunk to a
+ * small grid, so re-saving and resizing don't count; a removed object or a new sky does.
+ */
+export async function changedShare(before: Blob, after: Blob): Promise<number> {
+  const N = 48;
+  const grid = async (b: Blob) => {
+    const img = await loadImage(b);
+    const c = document.createElement("canvas");
+    c.width = N;
+    c.height = N;
+    const ctx = c.getContext("2d", { willReadFrequently: true })!;
+    ctx.drawImage(img, 0, 0, N, N);
+    return ctx.getImageData(0, 0, N, N).data;
+  };
+  const [a, b] = await Promise.all([grid(before), grid(after)]);
+  let changed = 0;
+  for (let i = 0; i < a.length; i += 4) {
+    const d = (Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2])) / (3 * 255);
+    if (d > 0.1) changed++;
+  }
+  return changed / (N * N);
+}
+
 export function creditNote(res: AiResult): string {
   return `${res.credits_used ?? 0} ${res.credits_used === 1 ? "credit" : "credits"} used${res.credits_left !== undefined ? `, ${res.credits_left.toLocaleString("en-US")} left` : ""}`;
 }

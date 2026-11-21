@@ -33,6 +33,8 @@ interface Props {
   ready?: { ok: boolean; why?: string };
   actionLabel: string;
   busyLabel: string;
+  /** Multiplies the credit estimate for options that cost more (e.g. a longer video). */
+  costFactor?: number;
   /** Measures the file for the credit estimate (pages for documents). */
   measure?: (file: File) => Promise<Partial<Measure>>;
   /** Does the whole job and returns the downloads. */
@@ -95,7 +97,7 @@ export function ServerTool(p: Props) {
   useEffect(() => reset(), [f.items, reset, ...(p.deps ?? [])]);
 
   const per = p.best && tool.premiumOption ? tool.premiumOption.credits : (tool.credits ?? 0);
-  const cost = estimate(p.slug, per, tool.unit, m);
+  const cost = Math.round(estimate(p.slug, per, tool.unit, m) * (p.costFactor ?? 1));
   const tooLong = !!p.maxMinutes && m.minutes > p.maxMinutes;
   const short = access.gate.kind === "plan" || access.gate.kind === "trial" ? cost > access.credits : false;
 
